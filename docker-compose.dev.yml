@@ -1,0 +1,50 @@
+services:
+  api-dev:
+    image: node:20-alpine
+    container_name: zirguportals_api_dev
+    working_dir: /app
+    restart: always
+    ports:
+      - "127.0.0.1:8086:8086"
+    env_file:
+      - .env.dev
+    volumes:
+      - ./:/app
+    command: ["npm","run","start"]
+    networks:
+      - infra_default
+    environment:
+      DATABASE_URL: postgresql://admin:lotidrosaparole11-119@postgres:5432/zirguportals_dev
+
+      S3_INTERNAL_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: https://minio-dev.zirguportals.lv
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: "drosaparole11-1-0!9="
+      S3_FORCE_PATH_STYLE: "true"
+
+      S3_PUBLIC_BASE_URL: https://dev-api.zirguportals.lv/files
+      S3_BUCKET_PROFILE_PICS: profile-pics
+      S3_BUCKET_TRAINERS_PROFILE_PICS: trainers-profile-pics
+      S3_BUCKET_EQUIPMENT_IMAGES: equipment-images
+      S3_BUCKET_HORSE_LISTING_IMAGES: horse-listing-images
+      S3_BUCKET_CHAT_FILES: chat-files
+      S3_BUCKET_FORUM_FILES: forum-files
+      S3_BUCKET_GROUP_AVATARS: group-avatars
+      S3_BUCKET_SERVICE_PROFILE_PHOTOS: service-profile-photos
+      S3_PUBLIC_BUCKET: public
+      S3_PRIVATE_BUCKET: private
+      GOOGLE_CLIENT_ID: "896942354413-fj9dfq974dgspk7iqsub3v8bj0o5dbus.apps.googleusercontent.com"
+      GOOGLE_CLIENT_SECRET: "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"
+      GOOGLE_CALLBACK_URL: "https://dev-api.zirguportals.lv/api/auth/google/callback"
+      APP_WEB_URL: "http://localhost:8083"
+      
+      SMTP_HOST: "smtp.yourprovider.com"
+      SMTP_PORT: "587"
+      SMTP_USER: "no-reply@zirguportals.lv"
+      SMTP_PASS: "yourpassword"
+      SMTP_FROM: "ZirguPortals <no-reply@zirguportals.lv>"
+      APP_WEB_URL: "http://localhost:8083"
+networks:
+  infra_default:
+    external: true

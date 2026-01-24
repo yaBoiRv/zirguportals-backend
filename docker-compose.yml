@@ -1,0 +1,19 @@
+services:
+  api:
+    image: node:20-alpine
+    container_name: zirguportals_api
+    working_dir: /app
+    restart: always
+    ports:
+      - "127.0.0.1:8085:8085"
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+    command: ["node","src/server.js"]
+    networks:
+      - infra_default
+
+networks:
+  infra_default:
+    external: true
