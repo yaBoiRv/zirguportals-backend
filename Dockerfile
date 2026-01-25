@@ -2,16 +2,17 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install deps first (better cache)
 COPY package*.json ./
 RUN npm install
 
-# copy prisma schema BEFORE generate
-COPY prisma ./prisma
+# Copy source
+COPY . .
 
-# generate prisma client into node_modules/.prisma
+# 🔴 THIS IS THE MISSING PIECE
 RUN npx prisma generate
 
-# now copy the rest of the app
-COPY . .
+# Expose API port
+EXPOSE 8086
 
 CMD ["npm", "run", "dev"]
