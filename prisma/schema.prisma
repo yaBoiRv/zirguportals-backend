@@ -1,7 +1,7 @@
 generator client {
   provider = "prisma-client-js"
   // You can remove previewFeatures; Prisma warns it's deprecated
-  // previewFeatures = ["multiSchema"]
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
