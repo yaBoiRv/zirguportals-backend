@@ -118,6 +118,91 @@ module.exports = async function dictionariesRoutes(fastify) {
           { key: 'gelding', name: lang === 'lv' ? 'Kastrāts' : lang === 'ru' ? 'Мерин' : 'Gelding' },
         ];
 
+      case 'countries':
+        return dictWithTranslations({
+          table: 'countries',
+          trTable: 'country_translations',
+          trFk: 'country_id',
+        }, lang);
+
+      case 'announcement-categories':
+        return dictWithTranslations({
+          table: 'announcement_categories',
+          trTable: 'announcement_category_translations',
+          trFk: 'category_id',
+        }, lang);
+
+      case 'service-specialties':
+        return dictWithTranslations({
+          table: 'service_specialties',
+          trTable: 'service_specialty_translations',
+          trFk: 'specialty_id',
+        }, lang);
+
+      case 'trainer-specialties':
+        return dictWithTranslations({
+          table: 'trainer_specialties',
+          trTable: 'trainer_specialty_translations',
+          trFk: 'specialty_id',
+        }, lang);
+
+      // Simple dictionaries (no translations or simple key/name)
+      case 'equipment-brands':
+        // Assuming simple table with id, key, name or just key/name. 
+        // If it uses translations, use dictWithTranslations.
+        // Based on commonService usage, it seems these might just be lists.
+        // Let's assume standard patterns:
+        return prisma.$queryRawUnsafe('SELECT id, key, name FROM public.equipment_brands ORDER BY name ASC');
+
+      case 'equipment-types':
+        return dictWithTranslations({
+          table: 'equipment_types',
+          trTable: 'equipment_type_translations',
+          trFk: 'type_id',
+        }, lang);
+
+      case 'equipment-materials':
+        // Handle equipmentTypeId filter if passed in query
+        // NOTE: request.query is available in scope? Yes, 'request' is arg.
+        const eqTypeId = request.query.equipmentTypeId ? Number(request.query.equipmentTypeId) : null;
+        let sql = `
+            SELECT b.id, b.key, t.name 
+            FROM public.equipment_materials b
+            LEFT JOIN public.equipment_material_translations t ON t.material_id = b.id AND t.lang_code = $1
+         `;
+        const params = [lang];
+        if (eqTypeId) {
+          sql += ` WHERE b.equipment_type_id = $2 `;
+          params.push(eqTypeId);
+        }
+        sql += ` ORDER BY COALESCE(t.name, b.key) ASC`;
+
+        const materials = await prisma.$queryRawUnsafe(sql, ...params);
+        return materials.map(r => ({ id: r.id, key: r.key, name: r.name ?? r.key }));
+
+      case 'equipment-conditions':
+        return dictWithTranslations({
+          table: 'equipment_conditions',
+          trTable: 'equipment_condition_translations',
+          trFk: 'condition_id',
+        }, lang);
+
+      case 'trainer-languages':
+        // Assuming a table or static list. Let's try table.
+        return prisma.$queryRawUnsafe('SELECT id, key, name FROM public.trainer_languages ORDER BY name ASC')
+          .catch(() => [
+            { id: 1, key: 'en', name: 'English' },
+            { id: 2, key: 'lv', name: 'Latvian' },
+            { id: 3, key: 'ru', name: 'Russian' }
+          ]);
+
+      case 'trainer-certifications':
+        return dictWithTranslations({
+          table: 'trainer_certifications',
+          trTable: 'trainer_certification_translations',
+          trFk: 'certification_id',
+        }, lang);
+
       default:
         reply.code(404);
         return { error: 'Dictionary not found', key };
