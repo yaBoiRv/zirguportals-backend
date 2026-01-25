@@ -23,6 +23,7 @@ const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const dictionariesRoutes = require("./src/routes/dictionaries");
 
 const prisma = new PrismaClient();
+fastify.decorate('prisma', prisma);
 
 const makeS3 = (endpoint) =>
   new S3Client({
@@ -44,6 +45,21 @@ const s3Internal = makeS3(process.env.S3_INTERNAL_ENDPOINT || process.env.S3_END
 
 const PUBLIC_BUCKET = process.env.S3_PUBLIC_BUCKET || "public";
 const PRIVATE_BUCKET = process.env.S3_PRIVATE_BUCKET || "private";
+
+const ALLOWED_BUCKETS = new Set(
+  [
+    process.env.S3_PUBLIC_BUCKET || "public",
+    process.env.S3_PRIVATE_BUCKET || "private",
+    process.env.S3_BUCKET_PROFILE_PICS || "profile-pics",
+    process.env.S3_BUCKET_TRAINER_PROFILE_PICS || "trainer-profile-pics",
+    process.env.S3_BUCKET_EQUIPMENT_IMAGES || "equipment-images",
+    process.env.S3_BUCKET_HORSE_LISTING_IMAGES || "horse-listing-images",
+    process.env.S3_BUCKET_CHAT_FILES || "chat-files",
+    process.env.S3_BUCKET_FORUM_FILES || "forum-files",
+    process.env.S3_BUCKET_GROUP_AVATARS || "group-avatars",
+    process.env.S3_BUCKET_SERVICE_PROFILE_PHOTOS || "service-profile-photos",
+  ].filter(Boolean)
+);
 
 // --- security plugins ---
 fastify.register(helmet, { global: true });
@@ -311,14 +327,21 @@ fastify.get("/whoami", async (req) => {
 
 
 fastify.post("/files/signed-upload", { preHandler: requireAuth }, async (req, reply) => {
-  const { filename, contentType, isPublic } = req.body || {};
+  const { filename, contentType, isPublic, bucket: requestedBucket } = req.body || {};
   if (!filename || !contentType) {
     return reply.code(400).send({ error: "filename and contentType required" });
   }
 
+  let bucket = isPublic ? PUBLIC_BUCKET : PRIVATE_BUCKET;
+  if (requestedBucket) {
+    if (!ALLOWED_BUCKETS.has(requestedBucket)) {
+      return reply.code(400).send({ error: "invalid bucket" });
+    }
+    bucket = requestedBucket;
+  }
+
   const ext = String(filename).split(".").pop()?.toLowerCase() || "bin";
   const key = `${crypto.randomUUID()}.${ext}`;
-  const bucket = isPublic ? PUBLIC_BUCKET : PRIVATE_BUCKET;
 
   const cmd = new PutObjectCommand({
     Bucket: bucket,
@@ -438,24 +461,11 @@ fastify.get("/files/:bucket/*", async (req, reply) => {
   const key = req.params["*"];
 
   // allow only known buckets
-  const allowed = new Set(
-    [
-      process.env.S3_PUBLIC_BUCKET,
-      process.env.S3_PRIVATE_BUCKET,
-      process.env.S3_BUCKET_PROFILE_PICS,
-      process.env.S3_BUCKET_TRAINER_PROFILE_PICS,
-      process.env.S3_BUCKET_EQUIPMENT_IMAGES,
-      process.env.S3_BUCKET_HORSE_LISTING_IMAGES,
-      process.env.S3_BUCKET_CHAT_FILES,
-      process.env.S3_BUCKET_FORUM_FILES,
-      process.env.S3_BUCKET_GROUP_AVATARS,
-      process.env.S3_BUCKET_SERVICE_PROFILE_PHOTOS,
-    ].filter(Boolean)
-  );
-
-  if (!allowed.has(bucket)) {
+  if (!ALLOWED_BUCKETS.has(bucket)) {
     return reply.code(404).send({ message: "Not found" });
   }
+
+
 
   // protect private bucket
   if (bucket === PRIVATE_BUCKET) {
@@ -583,17 +593,17 @@ const start = async () => {
     const io = new Server(fastify.server, {
       path: "/ws",
       cors: {
-        origin: [    
-		"https://zirguportals.lv",
-    		"https://www.zirguportals.lv",
-    		"https://dev-api.zirguportals.lv",
-    		"http://localhost:8083",
-    		"http://localhost:5173",
-    		"http://127.0.0.1:8083",
-    		"http://127.0.0.1:5173",
-	],
+        origin: [
+          "https://zirguportals.lv",
+          "https://www.zirguportals.lv",
+          "https://dev-api.zirguportals.lv",
+          "http://localhost:8083",
+          "http://localhost:5173",
+          "http://127.0.0.1:8083",
+          "http://127.0.0.1:5173",
+        ],
         credentials: true,
-	methods: ["GET", "POST", "OPTIONS"],
+        methods: ["GET", "POST", "OPTIONS"],
         allowedHeaders: ["Authorization", "Content-Type"],
       },
     });
@@ -614,66 +624,66 @@ const start = async () => {
       }
     });
 
-	io.on("connection", (socket) => {
-  fastify.log.info({ socketId: socket.id, user: socket.user }, "ws connected");
+    io.on("connection", (socket) => {
+      fastify.log.info({ socketId: socket.id, user: socket.user }, "ws connected");
 
-  socket.on("ping", () => socket.emit("pong"));
+      socket.on("ping", () => socket.emit("pong"));
 
-  socket.on("chat:join", async ({ conversationId }) => {
-    if (!conversationId) return;
+      socket.on("chat:join", async ({ conversationId }) => {
+        if (!conversationId) return;
 
-    const participant = await prisma.conversationParticipant.findUnique({
-      where: { conversationId_userId: { conversationId, userId: socket.user.id } },
+        const participant = await prisma.conversationParticipant.findUnique({
+          where: { conversationId_userId: { conversationId, userId: socket.user.id } },
+        });
+
+        if (!participant) {
+          socket.emit("chat:error", { error: "not a participant" });
+          return;
+        }
+
+        socket.join(`conv:${conversationId}`);
+        socket.emit("chat:joined", { conversationId });
+      });
+
+      socket.on("chat:send", async ({ conversationId, body }) => {
+        try {
+          if (!conversationId || !body) return;
+
+          const participant = await prisma.conversationParticipant.findUnique({
+            where: { conversationId_userId: { conversationId, userId: socket.user.id } },
+          });
+
+          if (!participant) {
+            socket.emit("chat:error", { error: "not a participant" });
+            return;
+          }
+
+          const msg = await prisma.message.create({
+            data: {
+              conversationId,
+              senderId: socket.user.id,
+              body: String(body).slice(0, 5000),
+            },
+            include: { sender: { select: { id: true, email: true } } },
+          });
+
+          io.to(`conv:${conversationId}`).emit("chat:new_message", {
+            id: msg.id,
+            conversationId: msg.conversationId,
+            body: msg.body,
+            createdAt: msg.createdAt,
+            sender: msg.sender,
+          });
+        } catch (e) {
+          fastify.log.error(e);
+          socket.emit("chat:error", { error: "send failed" });
+        }
+      });
+
+      socket.on("disconnect", (reason) => {
+        fastify.log.info({ socketId: socket.id, reason }, "ws disconnected");
+      });
     });
-
-    if (!participant) {
-      socket.emit("chat:error", { error: "not a participant" });
-      return;
-    }
-
-    socket.join(`conv:${conversationId}`);
-    socket.emit("chat:joined", { conversationId });
-  });
-
-  socket.on("chat:send", async ({ conversationId, body }) => {
-    try {
-      if (!conversationId || !body) return;
-
-      const participant = await prisma.conversationParticipant.findUnique({
-        where: { conversationId_userId: { conversationId, userId: socket.user.id } },
-      });
-
-      if (!participant) {
-        socket.emit("chat:error", { error: "not a participant" });
-        return;
-      }
-
-      const msg = await prisma.message.create({
-        data: {
-          conversationId,
-          senderId: socket.user.id,
-          body: String(body).slice(0, 5000),
-        },
-        include: { sender: { select: { id: true, email: true } } },
-      });
-
-      io.to(`conv:${conversationId}`).emit("chat:new_message", {
-        id: msg.id,
-        conversationId: msg.conversationId,
-        body: msg.body,
-        createdAt: msg.createdAt,
-        sender: msg.sender,
-      });
-    } catch (e) {
-      fastify.log.error(e);
-      socket.emit("chat:error", { error: "send failed" });
-    }
-  });
-
-  socket.on("disconnect", (reason) => {
-    fastify.log.info({ socketId: socket.id, reason }, "ws disconnected");
-  });
-});
 
 
     await fastify.listen({ port, host: "0.0.0.0" });
