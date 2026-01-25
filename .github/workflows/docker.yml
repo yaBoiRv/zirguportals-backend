@@ -32,5 +32,6 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/zirguportals-backend:latest
-            ghcr.io/${{ github.repository_owner }}/zirguportals-backend:${{ github.sha }}
+            tags: |
+              ghcr.io/yaboirv/zirguportals-backend:latest
+              ghcr.io/yaboirv/zirguportals-backend:${{ github.sha }}
