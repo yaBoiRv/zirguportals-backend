@@ -116,7 +116,7 @@ async function requireAuth(req, reply) {
   }
 }
 
-fastify.get("/api/profile/me", { preHandler: requireAuth }, async (req, reply) => {
+fastify.get("/profile/me", { preHandler: requireAuth }, async (req, reply) => {
   const userId = req.user.id;
 
   const profile = await prisma.profile.upsert({
@@ -143,7 +143,7 @@ fastify.get("/api/profile/me", { preHandler: requireAuth }, async (req, reply) =
 });
 
 
-fastify.patch("/api/profile/me", { preHandler: requireAuth }, async (req, reply) => {
+fastify.patch("/profile/me", { preHandler: requireAuth }, async (req, reply) => {
   const userId = req.user.id;
 
   // allow partial updates
@@ -196,7 +196,7 @@ fastify.patch("/api/profile/me", { preHandler: requireAuth }, async (req, reply)
 });
 
 
-fastify.delete("/api/profile/me", { preHandler: requireAuth }, async (req, reply) => {
+fastify.delete("/profile/me", { preHandler: requireAuth }, async (req, reply) => {
   try {
     const userId = req.user.id;
 
@@ -216,7 +216,7 @@ fastify.delete("/api/profile/me", { preHandler: requireAuth }, async (req, reply
 });
 
 
-fastify.get("/api/auth/google/start", async (req, reply) => {
+fastify.get("/auth/google/start", async (req, reply) => {
   const redirectUri = process.env.GOOGLE_CALLBACK_URL;
   const clientId = process.env.GOOGLE_CLIENT_ID;
 
@@ -235,7 +235,7 @@ fastify.get("/api/auth/google/start", async (req, reply) => {
 });
 
 
-fastify.get("/api/auth/google/callback", async (req, reply) => {
+fastify.get("/auth/google/callback", async (req, reply) => {
   const { code } = req.query || {};
   if (!code) return reply.code(400).send({ error: "missing code" });
 
@@ -326,7 +326,7 @@ fastify.get("/whoami", async (req) => {
 });
 
 
-fastify.post("/api/files/signed-upload", { preHandler: requireAuth }, async (req, reply) => {
+fastify.post("/files/signed-upload", { preHandler: requireAuth }, async (req, reply) => {
   const { filename, contentType, isPublic, bucket: requestedBucket } = req.body || {};
   if (!filename || !contentType) {
     return reply.code(400).send({ error: "filename and contentType required" });
@@ -355,7 +355,7 @@ fastify.post("/api/files/signed-upload", { preHandler: requireAuth }, async (req
 
 
 
-fastify.post("/api/chat/conversations", { preHandler: requireAuth }, async (req, reply) => {
+fastify.post("/chat/conversations", { preHandler: requireAuth }, async (req, reply) => {
   const { targetUserId, sourceType, sourceId } = req.body || {};
   if (!targetUserId) return reply.code(400).send({ error: "targetUserId required" });
   if (targetUserId === req.user.id) return reply.code(400).send({ error: "cannot message self" });
@@ -397,7 +397,7 @@ fastify.post("/api/chat/conversations", { preHandler: requireAuth }, async (req,
   return reply.send({ conversationId: conv.id });
 });
 
-fastify.get("/api/chat/conversations", { preHandler: requireAuth }, async (req, reply) => {
+fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, reply) => {
   const conversations = await prisma.conversation.findMany({
     where: {
       participants: { some: { userId: req.user.id } },
@@ -426,7 +426,7 @@ fastify.get("/api/chat/conversations", { preHandler: requireAuth }, async (req, 
 });
 
 fastify.get(
-  "/api/chat/conversations/:id/messages",
+  "/chat/conversations/:id/messages",
   { preHandler: requireAuth },
   async (req, reply) => {
     const conversationId = req.params.id;
@@ -456,7 +456,7 @@ fastify.get(
   }
 );
 
-fastify.get("/api/files/:bucket/*", async (req, reply) => {
+fastify.get("/files/:bucket/*", async (req, reply) => {
   const bucket = req.params.bucket;
   const key = req.params["*"];
 
@@ -496,7 +496,7 @@ fastify.get("/api/files/:bucket/*", async (req, reply) => {
 });
 
 
-fastify.get("/api/files/signed-download", { preHandler: requireAuth }, async (req, reply) => {
+fastify.get("/files/signed-download", { preHandler: requireAuth }, async (req, reply) => {
   const { key, bucket } = req.query || {};
   if (!key) return reply.code(400).send({ error: "key required" });
   if (!bucket) return reply.code(400).send({ error: "bucket required" });
@@ -509,7 +509,7 @@ fastify.get("/api/files/signed-download", { preHandler: requireAuth }, async (re
 
 
 fastify.post(
-  "/api/auth/register",
+  "/auth/register",
   { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } },
   async (req, reply) => {
     const { email, password } = req.body || {};
@@ -562,7 +562,7 @@ fastify.post(
 
 
 fastify.post(
-  "/api/auth/login",
+  "/auth/login",
   { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
   async (req, reply) => {
     const { email, password } = req.body || {};
