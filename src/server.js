@@ -216,7 +216,27 @@ fastify.delete("/api/profile/me", { preHandler: requireAuth }, async (req, reply
 });
 
 
+// Google OAuth routes (with /api prefix for direct access)
 fastify.get("/api/auth/google/start", async (req, reply) => {
+  const redirectUri = process.env.GOOGLE_CALLBACK_URL;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+
+  const state = crypto.randomUUID();
+  const scope = encodeURIComponent("openid email profile");
+
+  const url =
+    "https://accounts.google.com/o/oauth2/v2/auth" +
+    `?client_id=${encodeURIComponent(clientId)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&response_type=code` +
+    `&scope=${scope}` +
+    `&state=${encodeURIComponent(state)}`;
+
+  return reply.redirect(url);
+});
+
+// Google OAuth routes (without /api prefix for nginx proxy)
+fastify.get("/auth/google/start", async (req, reply) => {
   const redirectUri = process.env.GOOGLE_CALLBACK_URL;
   const clientId = process.env.GOOGLE_CLIENT_ID;
 
@@ -236,6 +256,79 @@ fastify.get("/api/auth/google/start", async (req, reply) => {
 
 
 fastify.get("/api/auth/google/callback", async (req, reply) => {
+  const { code } = req.query || {};
+  if (!code) return reply.code(400).send({ error: "missing code" });
+
+  const redirectUri = process.env.GOOGLE_CALLBACK_URL;
+
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code: String(code),
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
+
+  const tokens = await tokenRes.json();
+  if (!tokenRes.ok) {
+    req.log.error(tokens);
+    return reply.code(400).send({ error: "token_exchange_failed", details: tokens });
+  }
+
+  const ticket = await googleClient.verifyIdToken({
+    idToken: tokens.id_token,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+
+  const payload = ticket.getPayload();
+  const email = String(payload.email || "").toLowerCase();
+  if (!email) return reply.code(400).send({ error: "no_email_from_google" });
+
+  // Find/create user by email
+  let user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash: await argon2.hash(crypto.randomUUID()), // random, unused
+        emailVerified: true,
+      },
+    });
+  }
+
+  // Ensure profile exists
+  await prisma.profile.upsert({
+    where: { userId: user.id },
+    update: {},
+    create: {
+      userId: user.id,
+      name: payload.name || email.split("@")[0],
+      avatarUrl: payload.picture || null,
+      username: null,
+      phone: null,
+      hasTrainerProfile: false,
+      defaultLanguage: "en",
+      notificationPreferences: {
+        favorites: true,
+        new_listings: true,
+        chat_messages: true,
+        first_login_done: false,
+      },
+    },
+  });
+
+  const jwtToken = fastify.jwt.sign({ sub: user.id, email: user.email });
+
+  const web = process.env.APP_WEB_URL || "http://localhost:5173";
+  return reply.redirect(`${web}/auth/callback?token=${encodeURIComponent(jwtToken)}`);
+});
+
+// Google OAuth callback (without /api prefix for nginx proxy)
+fastify.get("/auth/google/callback", async (req, reply) => {
   const { code } = req.query || {};
   if (!code) return reply.code(400).send({ error: "missing code" });
 
