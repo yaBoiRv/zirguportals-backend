@@ -5,7 +5,7 @@ services:
     working_dir: /app
     restart: always
     ports:
-      - "127.0.0.1:8086:8086"
+      - "127.0.0.1:8085:8085"
     env_file:
       - .env.dev
     volumes:
@@ -14,6 +14,7 @@ services:
     networks:
       - infra_default
     environment:
+      PORT: "8085"
       DATABASE_URL: postgresql://admin:lotidrosaparole11-119@postgres:5432/zirguportals_dev
 
       S3_INTERNAL_ENDPOINT: http://minio:9000
