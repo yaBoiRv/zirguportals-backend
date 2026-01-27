@@ -51,7 +51,7 @@ module.exports = async function dictionariesRoutes(fastify) {
 
   // --- Fallback Data REMOVED - Database only ---
 
-  fastify.get('/dictionaries/:key', async (request, reply) => {
+  fastify.get('/:key', async (request, reply) => {
     const key = String(request.params.key || '').toLowerCase();
     const lang = normLang(request.query.lang);
 
