@@ -20,7 +20,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
-const dictionariesRoutes = require("./src/routes/dictionaries");
+const dictionariesRoutes = require("./routes/dictionaries");
 
 const prisma = new PrismaClient();
 fastify.decorate('prisma', prisma);
