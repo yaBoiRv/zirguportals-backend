@@ -60,10 +60,12 @@ module.exports = async function dictionariesRoutes(fastify) {
 
     switch (key) {
       case 'horse-colors':
+        // Include the `hex` column (aliased as `icon`) so the frontend can render color swatches.
         return dictWithTranslations({
           table: 'horse_colors',
           trTable: 'horse_color_translations',
           trFk: 'color_id',
+          iconColumn: 'hex',
         }, lang);
 
       case 'horse-breeds':
@@ -111,10 +113,11 @@ module.exports = async function dictionariesRoutes(fastify) {
         }, lang);
 
       case 'horse-sex':
+        // Return stable ids so frontend select components can use them as values.
         return [
-          { key: 'mare', name: lang === 'lv' ? 'Ķēve' : lang === 'ru' ? 'Кобыла' : 'Mare' },
-          { key: 'stallion', name: lang === 'lv' ? 'Ērzelis' : lang === 'ru' ? 'Жеребец' : 'Stallion' },
-          { key: 'gelding', name: lang === 'lv' ? 'Kastrāts' : lang === 'ru' ? 'Мерин' : 'Gelding' },
+          { id: 1, key: 'mare', name: lang === 'lv' ? 'Ķēve' : lang === 'ru' ? 'Кобыла' : 'Mare' },
+          { id: 2, key: 'stallion', name: lang === 'lv' ? 'Ērzelis' : lang === 'ru' ? 'Жеребец' : 'Stallion' },
+          { id: 3, key: 'gelding', name: lang === 'lv' ? 'Kastrāts' : lang === 'ru' ? 'Мерин' : 'Gelding' },
         ];
 
       case 'countries':
