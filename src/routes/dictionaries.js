@@ -110,6 +110,7 @@ module.exports = async function dictionariesRoutes(fastify) {
           table: 'equipment_colors',
           trTable: 'equipment_color_translations',
           trFk: 'color_id',
+          iconColumn: 'hex',
         }, lang);
 
       case 'horse-sex':
