@@ -677,6 +677,171 @@ fastify.post(
   }
 );
 
+// ========== Routes without /api prefix (for nginx proxy) ==========
+
+// Profile routes (nginx strips /api)
+fastify.get("/profile/me", { preHandler: requireAuth }, async (req, reply) => {
+  const userId = req.user.id;
+
+  const profile = await prisma.profile.upsert({
+    where: { userId },
+    update: {},
+    create: {
+      userId,
+      name: req.user.email?.split("@")[0] || "",
+      username: null,
+      avatarUrl: null,
+      phone: null,
+      hasTrainerProfile: false,
+      defaultLanguage: "en",
+      notificationPreferences: {
+        favorites: true,
+        new_listings: true,
+        chat_messages: true,
+        first_login_done: false,
+      },
+    },
+  });
+
+  return reply.send({ profile });
+});
+
+fastify.patch("/profile/me", { preHandler: requireAuth }, async (req, reply) => {
+  const userId = req.user.id;
+
+  const {
+    name,
+    username,
+    phone,
+    avatarUrl,
+    defaultLanguage,
+    notificationPreferences,
+  } = req.body || {};
+
+  try {
+    const profile = await prisma.profile.upsert({
+      where: { userId },
+      update: {
+        ...(name !== undefined ? { name } : {}),
+        ...(username !== undefined ? { username } : {}),
+        ...(phone !== undefined ? { phone } : {}),
+        ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+        ...(defaultLanguage !== undefined ? { defaultLanguage } : {}),
+        ...(notificationPreferences !== undefined
+          ? { notificationPreferences }
+          : {}),
+      },
+      create: {
+        userId,
+        name: name ?? "User",
+        username: username ?? null,
+        phone: phone ?? null,
+        avatarUrl: avatarUrl ?? null,
+        hasTrainerProfile: false,
+        defaultLanguage: defaultLanguage ?? "en",
+        notificationPreferences:
+          notificationPreferences ?? {
+            favorites: true,
+            new_listings: true,
+            chat_messages: true,
+            first_login_done: false,
+          },
+      },
+    });
+
+    return reply.send({ profile });
+  } catch (e) {
+    req.log.error(e);
+    return reply.code(500).send({ error: "failed_to_update_profile" });
+  }
+});
+
+fastify.delete("/profile/me", { preHandler: requireAuth }, async (req, reply) => {
+  try {
+    const userId = req.user.id;
+    await prisma.profile.delete({ where: { userId } });
+    await prisma.user.delete({ where: { id: userId } });
+    return reply.send({ success: true });
+  } catch (e) {
+    req.log.error(e);
+    return reply.code(500).send({ error: "failed_to_delete_profile" });
+  }
+});
+
+// Auth routes (nginx strips /api)
+fastify.post(
+  "/auth/register",
+  { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } },
+  async (req, reply) => {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return reply.code(400).send({ error: "email and password required" });
+    }
+
+    const safeEmail = String(email).trim().toLowerCase();
+
+    const existing = await prisma.user.findUnique({ where: { email: safeEmail } });
+    if (existing) return reply.code(409).send({ error: "email already in use" });
+
+    const passwordHash = await argon2.hash(password);
+
+    const { user } = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { email: safeEmail, passwordHash },
+        select: { id: true, email: true, emailVerified: true, createdAt: true },
+      });
+
+      await tx.profile.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          name: safeEmail.split("@")[0] || "",
+          username: null,
+          avatarUrl: null,
+          phone: null,
+          hasTrainerProfile: false,
+          defaultLanguage: "en",
+          notificationPreferences: {
+            favorites: true,
+            new_listings: true,
+            chat_messages: true,
+            first_login_done: false,
+          },
+        },
+      });
+
+      return { user };
+    });
+
+    const token = fastify.jwt.sign({ sub: user.id, email: user.email });
+    return reply.send({ user, token });
+  }
+);
+
+fastify.post(
+  "/auth/login",
+  { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+  async (req, reply) => {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return reply.code(400).send({ error: "email and password required" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return reply.code(401).send({ error: "invalid credentials" });
+
+    const ok = await argon2.verify(user.passwordHash, password);
+    if (!ok) return reply.code(401).send({ error: "invalid credentials" });
+
+    const token = fastify.jwt.sign({ sub: user.id, email: user.email });
+    return reply.send({
+      user: { id: user.id, email: user.email, emailVerified: user.emailVerified },
+      token,
+    });
+  }
+);
+
 // --- start + websockets ---
 const start = async () => {
   try {
