@@ -191,6 +191,10 @@ module.exports = async function dictionariesRoutes(fastify) {
           trFk: 'certification_id',
         }, lang);
 
+      case 'trainer-languages':
+        return prisma.$queryRawUnsafe('SELECT id, key, name FROM public.trainer_languages ORDER BY name ASC');
+
+
       default:
         reply.code(404);
         return { error: 'Dictionary not found', key };

@@ -21,6 +21,7 @@ const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/clien
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 const dictionariesRoutes = require("./routes/dictionaries");
+const listingsRoutes = require("./routes/listings");
 
 const prisma = new PrismaClient();
 fastify.decorate('prisma', prisma);
@@ -408,6 +409,9 @@ fastify.get("/health", async () => ({ ok: true }));
 
 fastify.register(dictionariesRoutes, { prefix: "/dictionaries" });
 fastify.register(dictionariesRoutes, { prefix: "/api/dictionaries" });
+
+fastify.register(listingsRoutes, { prefix: "/listings" });
+fastify.register(listingsRoutes, { prefix: "/api/listings" });
 
 fastify.get("/whoami", async (req) => {
   return {
