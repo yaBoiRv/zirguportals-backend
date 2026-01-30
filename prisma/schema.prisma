@@ -88,3 +88,333 @@ model Message {
   @@index([conversationId, createdAt])
   @@schema("public")
 }
+
+// --- Dictionaries ---
+
+model AnnouncementCategory {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  icon  String?
+  translations AnnouncementCategoryTranslation[]
+  @@map("announcement_categories")
+  @@schema("public")
+}
+
+model AnnouncementCategoryTranslation {
+  id          Int     @id @default(autoincrement())
+  categoryId  Int     @map("category_id")
+  langCode    String  @map("lang_code")
+  name        String
+  category    AnnouncementCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  @@unique([categoryId, langCode])
+  @@map("announcement_category_translations")
+  @@schema("public")
+}
+
+model Country {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations CountryTranslation[]
+  @@map("countries")
+  @@schema("public")
+}
+
+model CountryTranslation {
+  id        Int     @id @default(autoincrement())
+  countryId Int     @map("country_id")
+  langCode  String  @map("lang_code")
+  name      String
+  country   Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  @@unique([countryId, langCode])
+  @@map("country_translations")
+  @@schema("public")
+}
+
+model EquipmentBrand {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  name  String
+  @@map("equipment_brands")
+  @@schema("public")
+}
+
+model EquipmentColor {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  hex   String?
+  translations EquipmentColorTranslation[]
+  @@map("equipment_colors")
+  @@schema("public")
+}
+
+model EquipmentColorTranslation {
+  id       Int     @id @default(autoincrement())
+  colorId  Int     @map("color_id")
+  langCode String  @map("lang_code")
+  name     String
+  color    EquipmentColor @relation(fields: [colorId], references: [id], onDelete: Cascade)
+  @@unique([colorId, langCode])
+  @@map("equipment_color_translations")
+  @@schema("public")
+}
+
+model EquipmentCondition {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations EquipmentConditionTranslation[]
+  @@map("equipment_conditions")
+  @@schema("public")
+}
+
+model EquipmentConditionTranslation {
+  id          Int     @id @default(autoincrement())
+  conditionId Int     @map("condition_id")
+  langCode    String  @map("lang_code")
+  name        String
+  condition   EquipmentCondition @relation(fields: [conditionId], references: [id], onDelete: Cascade)
+  @@unique([conditionId, langCode])
+  @@map("equipment_condition_translations")
+  @@schema("public")
+}
+
+model EquipmentType {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations EquipmentTypeTranslation[]
+  materials EquipmentMaterial[]
+  @@map("equipment_types")
+  @@schema("public")
+}
+
+model EquipmentTypeTranslation {
+  id      Int     @id @default(autoincrement())
+  typeId  Int     @map("type_id")
+  langCode String @map("lang_code")
+  name    String
+  type    EquipmentType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  @@unique([typeId, langCode])
+  @@map("equipment_type_translations")
+  @@schema("public")
+}
+
+model EquipmentMaterial {
+  id              Int     @id @default(autoincrement())
+  key             String  @unique
+  equipmentTypeId Int?    @map("equipment_type_id")
+  equipmentType   EquipmentType? @relation(fields: [equipmentTypeId], references: [id])
+  translations    EquipmentMaterialTranslation[]
+  @@map("equipment_materials")
+  @@schema("public")
+}
+
+model EquipmentMaterialTranslation {
+  id          Int     @id @default(autoincrement())
+  materialId  Int     @map("material_id")
+  langCode    String  @map("lang_code")
+  name        String
+  material    EquipmentMaterial @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  @@unique([materialId, langCode])
+  @@map("equipment_material_translations")
+  @@schema("public")
+}
+
+model ForumCategory {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  icon  String?
+  translations ForumCategoryTranslation[]
+  @@map("forum_categories")
+  @@schema("public")
+}
+
+model ForumCategoryTranslation {
+  id          Int     @id @default(autoincrement())
+  categoryId  Int     @map("category_id")
+  langCode    String  @map("lang_code")
+  name        String
+  description String?
+  category    ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  @@unique([categoryId, langCode])
+  @@map("forum_category_translations")
+  @@schema("public")
+}
+
+model HorseBreed {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations HorseBreedTranslation[]
+  @@map("horse_breeds")
+  @@schema("public")
+}
+
+model HorseBreedTranslation {
+  id       Int     @id @default(autoincrement())
+  breedId  Int     @map("breed_id")
+  langCode String  @map("lang_code")
+  name     String
+  breed    HorseBreed @relation(fields: [breedId], references: [id], onDelete: Cascade)
+  @@unique([breedId, langCode])
+  @@map("horse_breed_translations")
+  @@schema("public")
+}
+
+model PonyBreed {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations PonyBreedTranslation[]
+  @@map("pony_breeds")
+  @@schema("public")
+}
+
+model PonyBreedTranslation {
+  id       Int     @id @default(autoincrement())
+  breedId  Int     @map("breed_id")
+  langCode String  @map("lang_code")
+  name     String
+  breed    PonyBreed @relation(fields: [breedId], references: [id], onDelete: Cascade)
+  @@unique([breedId, langCode])
+  @@map("pony_breed_translations")
+  @@schema("public")
+}
+
+model HorseColor {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  hex   String?
+  translations HorseColorTranslation[]
+  @@map("horse_colors")
+  @@schema("public")
+}
+
+model HorseColorTranslation {
+  id       Int     @id @default(autoincrement())
+  colorId  Int     @map("color_id")
+  langCode String  @map("lang_code")
+  name     String
+  color    HorseColor @relation(fields: [colorId], references: [id], onDelete: Cascade)
+  @@unique([colorId, langCode])
+  @@map("horse_color_translations")
+  @@schema("public")
+}
+
+model HorseDiscipline {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations HorseDisciplineTranslation[]
+  @@map("horse_disciplines")
+  @@schema("public")
+}
+
+model HorseDisciplineTranslation {
+  id           Int     @id @default(autoincrement())
+  disciplineId Int     @map("discipline_id")
+  langCode     String  @map("lang_code")
+  name         String
+  discipline   HorseDiscipline @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
+  @@unique([disciplineId, langCode])
+  @@map("horse_discipline_translations")
+  @@schema("public")
+}
+
+model HorseSex {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations HorseSexTranslation[]
+  @@map("horse_sex")
+  @@schema("public")
+}
+
+model HorseSexTranslation {
+  id    Int     @id @default(autoincrement())
+  sexId Int     @map("sex_id")
+  langCode String @map("lang_code")
+  name  String
+  sex   HorseSex @relation(fields: [sexId], references: [id], onDelete: Cascade)
+  @@unique([sexId, langCode])
+  @@map("horse_sex_translations")
+  @@schema("public")
+}
+
+model HorseTemperament {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations HorseTemperamentTranslation[]
+  @@map("horse_temperament")
+  @@schema("public")
+}
+
+model HorseTemperamentTranslation {
+  id            Int     @id @default(autoincrement())
+  temperamentId Int     @map("temperament_id")
+  langCode      String  @map("lang_code")
+  name          String
+  temperament   HorseTemperament @relation(fields: [temperamentId], references: [id], onDelete: Cascade)
+  @@unique([temperamentId, langCode])
+  @@map("horse_temperament_translations")
+  @@schema("public")
+}
+
+model ServiceSpecialty {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations ServiceSpecialtyTranslation[]
+  @@map("service_specialties")
+  @@schema("public")
+}
+
+model ServiceSpecialtyTranslation {
+  id          Int     @id @default(autoincrement())
+  specialtyId Int     @map("specialty_id")
+  langCode    String  @map("lang_code")
+  name        String
+  specialty   ServiceSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  @@unique([specialtyId, langCode])
+  @@map("service_specialty_translations")
+  @@schema("public")
+}
+
+model TrainerSpecialty {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations TrainerSpecialtyTranslation[]
+  @@map("trainer_specialties")
+  @@schema("public")
+}
+
+model TrainerSpecialtyTranslation {
+  id          Int     @id @default(autoincrement())
+  specialtyId Int     @map("specialty_id")
+  langCode    String  @map("lang_code")
+  name        String
+  specialty   TrainerSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  @@unique([specialtyId, langCode])
+  @@map("trainer_specialty_translations")
+  @@schema("public")
+}
+
+model TrainerLanguage {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  name  String? 
+  @@map("trainer_languages")
+  @@schema("public")
+}
+
+model TrainerCertification {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  translations TrainerCertificationTranslation[]
+  @@map("trainer_certifications")
+  @@schema("public")
+}
+
+model TrainerCertificationTranslation {
+  id              Int     @id @default(autoincrement())
+  certificationId Int     @map("certification_id")
+  langCode        String  @map("lang_code")
+  name            String
+  certification   TrainerCertification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+  @@unique([certificationId, langCode])
+  @@map("trainer_certification_translations")
+  @@schema("public")
+}

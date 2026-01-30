@@ -114,12 +114,11 @@ module.exports = async function dictionariesRoutes(fastify) {
         }, lang);
 
       case 'horse-sex':
-        // Return stable ids so frontend select components can use them as values.
-        return [
-          { id: 1, key: 'mare', name: lang === 'lv' ? 'Ķēve' : lang === 'ru' ? 'Кобыла' : 'Mare' },
-          { id: 2, key: 'stallion', name: lang === 'lv' ? 'Ērzelis' : lang === 'ru' ? 'Жеребец' : 'Stallion' },
-          { id: 3, key: 'gelding', name: lang === 'lv' ? 'Kastrāts' : lang === 'ru' ? 'Мерин' : 'Gelding' },
-        ];
+        return dictWithTranslations({
+          table: 'horse_sex',
+          trTable: 'horse_sex_translations',
+          trFk: 'sex_id',
+        }, lang);
 
       case 'countries':
         return dictWithTranslations({
