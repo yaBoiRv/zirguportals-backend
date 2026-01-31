@@ -23,29 +23,33 @@ module.exports = async function dictionariesRoutes(fastify) {
   async function dictWithTranslations({ table, trTable, trFk, iconColumn = null }, lang) {
     // Uses LEFT JOIN so if translation missing, name can be null.
     // You can COALESCE to fallback later if you want.
-    const rows = await prisma.$queryRawUnsafe(
-      `
-      SELECT
-        b.id,
-        b.key,
-        ${iconColumn ? `b.${iconColumn} AS icon,` : ''}
-        t.name
-      FROM public.${table} b
-      LEFT JOIN public.${trTable} t
-        ON t.${trFk} = b.id
-       AND t.lang_code = $1
-      ORDER BY COALESCE(t.name, b.key) ASC;
-      `,
-      lang
-    );
+    try {
+      const rows = await prisma.$queryRawUnsafe(
+        `
+        SELECT
+          b.id,
+          b.key,
+          ${iconColumn ? `b.${iconColumn} AS icon,` : ''}
+          t.name
+        FROM public.${table} b
+        LEFT JOIN public.${trTable} t
+          ON t.${trFk} = b.id
+         AND t.lang_code = $1
+        ORDER BY COALESCE(t.name, b.key) ASC;
+        `,
+        lang
+      );
 
-    // Ensure consistent output shape
-    return rows.map(r => ({
-      id: r.id,
-      key: r.key,
-      name: r.name ?? r.key,
-      ...(iconColumn ? { icon: r.icon } : {}),
-    }));
+      return rows.map(r => ({
+        id: r.id,
+        key: r.key,
+        name: r.name ?? r.key,
+        ...(iconColumn ? { icon: r.icon } : {}),
+      }));
+    } catch (err) {
+      console.error(`Error fetching dictionary ${table}:`, err.message);
+      return [];
+    }
   }
 
 
@@ -193,8 +197,13 @@ module.exports = async function dictionariesRoutes(fastify) {
       case 'trainer-languages':
       case 'trainer-languages':
         // Fix: DB seems to miss 'name' column, so we query only key and use it as name
-        return prisma.$queryRawUnsafe('SELECT id, key FROM public.trainer_languages ORDER BY key ASC')
-          .then(rows => rows.map(r => ({ id: r.id, key: r.key, name: r.key })));
+        try {
+          const rows = await prisma.$queryRawUnsafe('SELECT id, key FROM public.trainer_languages ORDER BY key ASC');
+          return rows.map(r => ({ id: r.id, key: r.key, name: r.key }));
+        } catch (err) {
+          console.error('Error fetching trainer-languages:', err.message);
+          return [];
+        }
 
 
       default:
