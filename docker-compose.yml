@@ -11,6 +11,8 @@ services:
     volumes:
       - ./:/app
     command: ["node","src/server.js"]
+    environment:
+      - DATABASE_URL=postgresql://admin:lotidrosaparole11-119@postgres:5432/zirguportals_dev
     networks:
       - infra_default
 
