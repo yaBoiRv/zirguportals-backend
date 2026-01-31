@@ -191,7 +191,10 @@ module.exports = async function dictionariesRoutes(fastify) {
         }, lang);
 
       case 'trainer-languages':
-        return prisma.$queryRawUnsafe('SELECT id, key, name FROM public.trainer_languages ORDER BY name ASC');
+      case 'trainer-languages':
+        // Fix: DB seems to miss 'name' column, so we query only key and use it as name
+        return prisma.$queryRawUnsafe('SELECT id, key FROM public.trainer_languages ORDER BY key ASC')
+          .then(rows => rows.map(r => ({ id: r.id, key: r.key, name: r.key })));
 
 
       default:
