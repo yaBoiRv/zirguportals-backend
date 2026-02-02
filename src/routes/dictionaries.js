@@ -156,14 +156,14 @@ module.exports = async function dictionariesRoutes(fastify) {
         }
 
       case 'trainer-specialties':
-        // Use raw SQL since specialty_key column name differs
+        // trainer_specialties uses 'key' column (not specialty_key)
         try {
           const rows = await prisma.$queryRawUnsafe(
-            `SELECT b.id, b.specialty_key as key, t.name
+            `SELECT b.id, b.key, t.name
              FROM public.trainer_specialties b
              LEFT JOIN public.trainer_specialty_translations t
                ON t.specialty_id = b.id AND t.lang_code = $1
-             ORDER BY COALESCE(t.name, b.specialty_key) ASC`,
+             ORDER BY COALESCE(t.name, b.key) ASC`,
             lang
           );
           return rows.map(r => ({ id: r.id, key: r.key, name: r.name ?? r.key }));
