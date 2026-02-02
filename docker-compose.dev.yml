@@ -45,7 +45,6 @@ services:
       SMTP_USER: "no-reply@horseportal.net"
       SMTP_PASS: "yourpassword"
       SMTP_FROM: "HorsePortal <no-reply@horseportal.net>"
-      APP_WEB_URL: "http://localhost:8083"
 networks:
   infra_default:
     external: true
