@@ -73,9 +73,9 @@ fastify.register(cors, {
     if (!origin) return cb(null, true); // allow curl / server-to-server
 
     const allowed = new Set([
-      "https://zirguportals.lv",
-      "https://www.zirguportals.lv",
-      "https://dev-api.zirguportals.lv",
+      "https://horseportal.net",
+      "https://www.horseportal.net",
+      "https://dev-api.horseportal.net",
       "http://localhost:8083",
       "http://localhost:5173",
       "http://127.0.0.1:8083",
@@ -863,9 +863,9 @@ const start = async () => {
       path: "/ws",
       cors: {
         origin: [
-          "https://zirguportals.lv",
-          "https://www.zirguportals.lv",
-          "https://dev-api.zirguportals.lv",
+          "https://horseportal.net",
+          "https://www.horseportal.net",
+          "https://dev-api.horseportal.net",
           "http://localhost:8083",
           "http://localhost:5173",
           "http://127.0.0.1:8083",
