@@ -1,7 +1,7 @@
 services:
   api-dev:
     image: node:20-alpine
-    container_name: horseportal_api_dev
+    container_name: zirguportals_api_dev
     working_dir: /app
     restart: always
     ports:
