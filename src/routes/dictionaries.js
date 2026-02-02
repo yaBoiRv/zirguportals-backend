@@ -145,7 +145,7 @@ module.exports = async function dictionariesRoutes(fastify) {
             `SELECT b.id, b.specialty_key as key, t.name
              FROM public.service_specialties b
              LEFT JOIN public.service_specialty_translations t
-               ON t.specialty_id = b.id AND t.lang_code = $1
+               ON t.specialty_key = b.id AND t.lang_code = $1
              ORDER BY COALESCE(t.name, b.specialty_key) ASC`,
             lang
           );

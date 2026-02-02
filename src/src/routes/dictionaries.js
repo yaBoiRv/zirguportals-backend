@@ -114,11 +114,6 @@ module.exports = async function dictionariesRoutes(fastify) {
       case 'horse-sex':
         // You don't have a table for this in your list. Frontend expects it -> return static.
         // Adjust keys to what your frontend expects (common ones: mare/stallion/gelding).
-        return [
-          { key: 'mare', name: lang === 'lv' ? 'Ķēve' : lang === 'ru' ? 'Кобыла' : 'Mare' },
-          { key: 'stallion', name: lang === 'lv' ? 'Ērzelis' : lang === 'ru' ? 'Жеребец' : 'Stallion' },
-          { key: 'gelding', name: lang === 'lv' ? 'Kastrāts' : lang === 'ru' ? 'Мерин' : 'Gelding' },
-        ];
 
       default:
         reply.code(404);
