@@ -20,7 +20,7 @@ module.exports = async function dictionariesRoutes(fastify) {
   }
 
   // Helper: base table + translation table (name)
-  async function dictWithTranslations({ table, trTable, trFk, iconColumn = null }, lang) {
+  async function dictWithTranslations({ table, trTable, trFk, iconColumn = null, keyColumn = 'key' }, lang) {
     // Uses LEFT JOIN so if translation missing, name can be null.
     // You can COALESCE to fallback later if you want.
     try {
@@ -28,14 +28,14 @@ module.exports = async function dictionariesRoutes(fastify) {
         `
         SELECT
           b.id,
-          b.key,
+          b.${keyColumn} as key,
           ${iconColumn ? `b.${iconColumn} AS icon,` : ''}
           t.name
         FROM public.${table} b
         LEFT JOIN public.${trTable} t
           ON t.${trFk} = b.id
          AND t.lang_code = $1
-        ORDER BY COALESCE(t.name, b.key) ASC;
+        ORDER BY COALESCE(t.name, b.${keyColumn}) ASC;
         `,
         lang
       );
@@ -139,18 +139,38 @@ module.exports = async function dictionariesRoutes(fastify) {
         }, lang);
 
       case 'service-specialties':
-        return dictWithTranslations({
-          table: 'service_specialties',
-          trTable: 'service_specialty_translations',
-          trFk: 'specialty_id',
-        }, lang);
+        // Use raw SQL since specialty_key column name differs
+        try {
+          const rows = await prisma.$queryRawUnsafe(
+            `SELECT b.id, b.specialty_key as key, t.name
+             FROM public.service_specialties b
+             LEFT JOIN public.service_specialty_translations t
+               ON t.specialty_id = b.id AND t.lang_code = $1
+             ORDER BY COALESCE(t.name, b.specialty_key) ASC`,
+            lang
+          );
+          return rows.map(r => ({ id: r.id, key: r.key, name: r.name ?? r.key }));
+        } catch (err) {
+          console.error('Error fetching service-specialties:', err.message);
+          return [];
+        }
 
       case 'trainer-specialties':
-        return dictWithTranslations({
-          table: 'trainer_specialties',
-          trTable: 'trainer_specialty_translations',
-          trFk: 'specialty_id',
-        }, lang);
+        // Use raw SQL since specialty_key column name differs
+        try {
+          const rows = await prisma.$queryRawUnsafe(
+            `SELECT b.id, b.specialty_key as key, t.name
+             FROM public.trainer_specialties b
+             LEFT JOIN public.trainer_specialty_translations t
+               ON t.specialty_id = b.id AND t.lang_code = $1
+             ORDER BY COALESCE(t.name, b.specialty_key) ASC`,
+            lang
+          );
+          return rows.map(r => ({ id: r.id, key: r.key, name: r.name ?? r.key }));
+        } catch (err) {
+          console.error('Error fetching trainer-specialties:', err.message);
+          return [];
+        }
 
       case 'equipment-brands':
         return prisma.$queryRawUnsafe('SELECT id, key, name FROM public.equipment_brands ORDER BY name ASC');
