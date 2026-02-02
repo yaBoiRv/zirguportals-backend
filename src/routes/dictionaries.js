@@ -141,7 +141,7 @@ module.exports = async function dictionariesRoutes(fastify) {
       case 'service-specialties':
         try {
           const rows = await prisma.$queryRawUnsafe(
-            `SELECT b.id, b.specialty_key as key, COALESCE(t.name, b.specialty_key) AS name
+            `SELECT b.id::text as id, b.specialty_key as key, COALESCE(t.name, b.specialty_key) AS name
             FROM public.service_specialties b
             LEFT JOIN public.service_specialty_translations t
               ON t.specialty_key = b.specialty_key AND t.lang_code = $1
