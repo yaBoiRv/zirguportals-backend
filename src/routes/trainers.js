@@ -18,6 +18,41 @@ module.exports = async function trainersRoutes(fastify) {
         }
     }
 
+    // GET /trainers
+    fastify.get('/', async (req, reply) => {
+        try {
+            // Join with profiles to get avatar and username of the trainer (if needed, but trainers table has photo_url itself)
+            // But frontend typically uses profiles info for 'seller'
+            const rows = await prisma.$queryRawUnsafe(`
+                SELECT t.*, p.name as profile_name, p.username as profile_username, p.avatar_url as profile_avatar
+                FROM public.trainers t
+                LEFT JOIN public.profiles p ON p.user_id = t.user_id
+                WHERE t.visible = true
+                ORDER BY t.created_at DESC
+                LIMIT 100
+            `);
+
+            // Map to structure matching frontend expectations if necessary
+            // Frontend Trainers.tsx expects: profiles { name, username, avatar_url }
+            // Since we use raw SQL, we can shape it here or let frontend map it.
+            // Let's return flattened or nested. standard prisma returns nested if include.
+            // Here we return flat columns. Frontend needs adaptation if it expects nested 'profiles' object.
+
+            // To mimic Supabase response structure:
+            return rows.map(r => ({
+                ...r,
+                profiles: {
+                    name: r.profile_name,
+                    username: r.profile_username,
+                    avatar_url: r.profile_avatar
+                }
+            }));
+        } catch (e) {
+            console.error(e);
+            return reply.code(500).send({ error: 'Database error' });
+        }
+    });
+
     // GET /trainers/:id
     // If id is a UUID, fetch by ID.
     fastify.get('/:id', async (req, reply) => {

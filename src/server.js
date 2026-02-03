@@ -23,6 +23,7 @@ const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const dictionariesRoutes = require("./routes/dictionaries");
 const listingsRoutes = require("./routes/listings");
 const trainersRoutes = require("./routes/trainers");
+const servicesRoutes = require("./routes/services");
 
 const prisma = new PrismaClient();
 fastify.decorate('prisma', prisma);
@@ -418,6 +419,9 @@ fastify.register(listingsRoutes, { prefix: "/api/listings" });
 
 fastify.register(trainersRoutes, { prefix: "/trainers" });
 fastify.register(trainersRoutes, { prefix: "/api/trainers" });
+
+fastify.register(servicesRoutes, { prefix: "/services" });
+fastify.register(servicesRoutes, { prefix: "/api/services" });
 
 
 fastify.get("/whoami", async (req) => {
