@@ -196,8 +196,26 @@ module.exports = async function dictionariesRoutes(fastify) {
         }
         sql += ` ORDER BY COALESCE(t.name, b.key) ASC`;
 
-        const materials = await prisma.$queryRawUnsafe(sql, ...params);
-        return materials.map(r => ({ id: r.id, key: r.key, name: r.name ?? r.key }));
+        try {
+          const materials = await prisma.$queryRawUnsafe(sql, ...params);
+          return materials.map(r => ({ id: r.id, key: r.key, name: r.name ?? r.key }));
+        } catch (err) {
+          // Some installations may not have equipment_type_id column on equipment_materials.
+          // Retry without filtering by equipment_type_id so the endpoint remains usable.
+          console.warn('equipment-materials query failed, retrying without equipment_type filter:', err.message || err);
+          try {
+            const fallbackSql = `
+              SELECT b.id, b.key, t.name
+              FROM public.equipment_materials b
+              LEFT JOIN public.equipment_material_translations t ON t.material_id = b.id AND t.lang_code = $1
+              ORDER BY COALESCE(t.name, b.key) ASC`;
+            const materials = await prisma.$queryRawUnsafe(fallbackSql, lang);
+            return materials.map(r => ({ id: r.id, key: r.key, name: r.name ?? r.key }));
+          } catch (err2) {
+            console.error('Fallback equipment-materials query also failed:', err2.message || err2);
+            return [];
+          }
+        }
       }
 
       case 'equipment-conditions':
