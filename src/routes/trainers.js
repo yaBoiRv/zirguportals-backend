@@ -58,10 +58,28 @@ module.exports = async function trainersRoutes(fastify) {
     fastify.get('/:id', async (req, reply) => {
         const { id } = req.params;
         try {
-            // Check if it's a UUID or 'me' (though 'me' usually distinct, let's just handle ID for now)
-            const rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.trainers WHERE id = $1::uuid`, id);
+            const rows = await prisma.$queryRawUnsafe(`
+                SELECT t.*, p.username as profile_username, p.name as profile_name, p.avatar_url as profile_avatar, p.created_at as profile_created_at
+                FROM public.trainers t
+                LEFT JOIN public.profiles p ON p.user_id = t.user_id
+                WHERE t.id = $1::uuid
+            `, id);
+
             if (!rows.length) return reply.code(404).send({ error: 'Trainer not found' });
-            return rows[0];
+
+            // Increment views count asynchronously
+            prisma.$queryRawUnsafe(`UPDATE public.trainers SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1::uuid`, id).catch(e => console.error('Error incrementing views:', e));
+
+            const r = rows[0];
+            return {
+                ...r,
+                profiles: {
+                    username: r.profile_username,
+                    name: r.profile_name,
+                    avatar_url: r.profile_avatar,
+                    created_at: r.profile_created_at
+                }
+            };
         } catch (e) {
             console.error(e);
             return reply.code(500).send({ error: 'Database error' });
