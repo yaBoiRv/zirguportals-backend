@@ -27,7 +27,13 @@ module.exports = async function listingsRoutes(fastify) {
     // GET /listings/horses
     fastify.get('/horses', async (req, reply) => {
         try {
-            const rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.horse_listings WHERE visible = true ORDER BY created_at DESC LIMIT 50`);
+            const userId = req.query.user_id;
+            let rows;
+            if (userId) {
+                rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.horse_listings WHERE user_id = $1::uuid ORDER BY created_at DESC`, userId);
+            } else {
+                rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.horse_listings WHERE visible = true ORDER BY created_at DESC LIMIT 50`);
+            }
             return rows.map(listing => ({
                 ...listing,
                 name: listing.title,
@@ -167,6 +173,22 @@ module.exports = async function listingsRoutes(fastify) {
             return { ...listing, colors };
         } catch (e) {
             return reply.code(500).send({ error: 'Database error' });
+        }
+    });
+
+    // GET /listings/equipment
+    fastify.get('/equipment', async (req, reply) => {
+        try {
+            const userId = req.query.user_id;
+            let rows;
+            if (userId) {
+                rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.equipment_listings WHERE user_id = $1::uuid ORDER BY created_at DESC`, userId);
+            } else {
+                rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.equipment_listings WHERE visible = true ORDER BY created_at DESC LIMIT 50`);
+            }
+            return rows.map(listing => ({ ...listing }));
+        } catch (e) {
+            return reply.code(500).send({ error: 'Failed to fetch equipment listings' });
         }
     });
 
