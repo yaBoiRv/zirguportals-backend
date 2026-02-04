@@ -244,9 +244,10 @@ module.exports = async function listingsRoutes(fastify) {
         const { id } = req.params;
         try {
             const rows = await prisma.$queryRawUnsafe(
-                `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar, p.phone as seller_phone, p.created_at as seller_member_since
+                `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar, p.phone as seller_phone, p.created_at as seller_member_since, b.name as brand
                  FROM public.equipment_listings l
                  LEFT JOIN public.profiles p ON p.user_id = l.user_id
+                 LEFT JOIN public.equipment_brands b ON b.id = l.brand_id
                  WHERE l.id = $1::uuid`,
                 id
             );
