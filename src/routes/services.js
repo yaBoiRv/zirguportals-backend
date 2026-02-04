@@ -129,25 +129,39 @@ module.exports = async function servicesRoutes(fastify) {
             if (!existing.length) return reply.code(404).send({ error: 'Service not found' });
             if (existing[0].user_id !== userId) return reply.code(403).send({ error: 'Forbidden' });
 
-            await prisma.$queryRawUnsafe(
-                `UPDATE public.services SET
-                    full_name = $2, bio = $3, hourly_rate = $4, specialty = $5, specialties = $6::text[],
-                    regions_served = $7::jsonb, phone = $8, profile_photo_url = $9, visible = $10,
-                    pricing_type = $11, custom_specialty = $12, updated_at = NOW()
-                WHERE id = $1::uuid`,
-                id,
-                b.full_name,
-                b.bio,
-                b.hourly_rate || null,
-                b.specialty || '',
-                b.specialties || [],
-                JSON.stringify(b.regions_served || []),
-                b.phone || null,
-                b.profile_photo_url || null,
-                b.visible !== false,
-                b.pricing_type || 'not_specified',
-                b.custom_specialty || null
-            );
+            const fields = [];
+            const values = [id];
+            let idx = 2;
+
+            const mappings = {
+                full_name: 'full_name',
+                bio: 'bio',
+                hourly_rate: 'hourly_rate',
+                specialty: 'specialty',
+                specialties: 'specialties',
+                regions_served: 'regions_served',
+                phone: 'phone',
+                profile_photo_url: 'profile_photo_url',
+                visible: 'visible',
+                pricing_type: 'pricing_type',
+                custom_specialty: 'custom_specialty'
+            };
+
+            for (const [key, col] of Object.entries(mappings)) {
+                if (b[key] !== undefined) {
+                    let val = b[key];
+                    if (key === 'regions_served') val = JSON.stringify(val);
+                    fields.push(`${col} = $${idx++}`);
+                    values.push(val);
+                }
+            }
+
+            fields.push(`updated_at = NOW()`);
+
+            if (fields.length > 1) {
+                const query = `UPDATE public.services SET ${fields.join(', ')} WHERE id = $1::uuid`;
+                await prisma.$queryRawUnsafe(query, ...values);
+            }
 
             return { id };
         } catch (e) {

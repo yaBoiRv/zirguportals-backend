@@ -162,35 +162,54 @@ module.exports = async function trainersRoutes(fastify) {
             const existing = await prisma.$queryRawUnsafe(`SELECT user_id FROM public.trainers WHERE id = $1::uuid`, id);
             if (!existing.length) return reply.code(404).send({ error: 'Trainer not found' });
 
-            // Allow if owner. (Add admin check later if needed)
             if (existing[0].user_id !== userId) {
                 return reply.code(403).send({ error: 'Forbidden' });
             }
 
-            await prisma.$queryRawUnsafe(
-                `UPDATE public.trainers SET
-          name = $2, bio = $3, years_experience = $4, hourly_rate = $5, pricing_type = $6,
-          phone = $7, website_url = $8, photo_url = $9, age = $10, specialties = $11,
-          languages = $12, certifications = $13, certification_details = $14::jsonb,
-          files = $15, visible = $16
-        WHERE id = $1::uuid`,
-                id,
-                b.name,
-                b.bio,
-                b.years_experience,
-                b.hourly_rate || null,
-                b.pricing_type,
-                b.phone || null,
-                b.website_url || null,
-                b.photo_url || null,
-                b.age || null,
-                b.specialties || [],
-                b.languages || [],
-                b.certifications || [],
-                JSON.stringify(b.certification_details || []),
-                b.files || [],
-                b.visible !== false
-            );
+            // Dynamically build SET clause
+            const fields = [];
+            const values = [id]; // $1 is id
+            let idx = 2;
+
+            const mappings = {
+                name: 'name',
+                bio: 'bio',
+                years_experience: 'years_experience',
+                hourly_rate: 'hourly_rate',
+                pricing_type: 'pricing_type',
+                phone: 'phone',
+                website_url: 'website_url',
+                photo_url: 'photo_url',
+                age: 'age',
+                specialties: 'specialties',
+                languages: 'languages',
+                certifications: 'certifications',
+                certification_details: 'certification_details',
+                files: 'files',
+                visible: 'visible',
+                city: 'city',
+                country: 'country'
+            };
+
+            for (const [key, col] of Object.entries(mappings)) {
+                if (b[key] !== undefined) {
+                    let val = b[key];
+                    if (key === 'certification_details') val = JSON.stringify(val);
+                    fields.push(`${col} = $${idx++}`);
+                    values.push(val);
+                }
+            }
+
+            // Always update updated_at
+            fields.push(`updated_at = NOW()`);
+
+            if (fields.length === 1) { // Only updated_at
+                return { id }; // Nothing to update
+            }
+
+            const query = `UPDATE public.trainers SET ${fields.join(', ')} WHERE id = $1::uuid`;
+
+            await prisma.$queryRawUnsafe(query, ...values);
 
             return { id };
         } catch (e) {

@@ -29,15 +29,19 @@ module.exports = async function listingsRoutes(fastify) {
         try {
             const {
                 user_id, min_price, max_price, min_age, max_age, min_height, max_height,
-                breed_id, sex_id, search, sort, limit = 50, offset = 0
+                breed_id, sex_id, search, sort, limit = 50, offset = 0, include_hidden
             } = req.query;
 
             let sql = `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar 
                        FROM public.horse_listings l
                        LEFT JOIN public.profiles p ON p.user_id = l.user_id
-                       WHERE l.visible = true`;
+                       WHERE 1=1`;
             const params = [];
             let pIdx = 1;
+
+            if (include_hidden !== 'true') {
+                sql += ` AND l.visible = true`;
+            }
 
             if (user_id) {
                 sql += ` AND l.user_id = $${pIdx++}::uuid`;
@@ -67,7 +71,9 @@ module.exports = async function listingsRoutes(fastify) {
             }
 
             // Status visibility
-            sql += ` AND (l.status = 'available' OR (l.status = 'sold' AND l.sold_at >= NOW() - INTERVAL '3 days'))`;
+            if (include_hidden !== 'true') {
+                sql += ` AND (l.status = 'available' OR (l.status = 'sold' AND l.sold_at >= NOW() - INTERVAL '3 days'))`;
+            }
 
             // Sort
             if (sort === 'price_asc') sql += ` ORDER BY l.price ASC`;
@@ -198,41 +204,83 @@ module.exports = async function listingsRoutes(fastify) {
         const { id } = req.params;
         const userId = req.user.id;
         const b = req.body;
-        const age = b.birth_year ? (new Date().getFullYear() - b.birth_year) : null;
-        const video_urls = b.video_url ? [b.video_url] : [];
 
         try {
             const rows = await prisma.$queryRawUnsafe(`SELECT user_id FROM public.horse_listings WHERE id = $1::uuid`, id);
             if (!rows.length) return reply.code(404).send({ error: 'Not found' });
             if (rows[0].user_id !== userId) return reply.code(403).send({ error: 'Forbidden' });
 
-            await prisma.$queryRawUnsafe(
-                `UPDATE public.horse_listings SET 
-                    title = $2, description = $3, price = $4, currency = $5, country = $6, images = $7, 
-                    featured = $8, age = $9, height = $10, video_urls = $11, breed_id = $12, sex_id = $13, 
-                    visible = $14, municipality = $15, lat = $16, lon = $17, city = $18
-                WHERE id = $1::uuid`,
-                id, b.name || b.title, b.description, b.price || null, b.currency || 'EUR', b.country, b.images || [],
-                b.featured || false, age, b.height || null, video_urls, b.breed_id || null, b.sex_id || null,
-                b.visible !== false, b.municipality || null, Number(b.lat || 0), Number(b.lon || 0), b.city || null
-            );
+            const fields = [];
+            const values = [id];
+            let idx = 2;
 
-            // Re-sync colors and disciplines
+            const mappings = {
+                title: 'title', name: 'title',
+                description: 'description',
+                price: 'price',
+                currency: 'currency',
+                country: 'country',
+                images: 'images',
+                featured: 'featured',
+                age: 'age',
+                height: 'height',
+                video_url: 'video_urls',
+                video_urls: 'video_urls',
+                breed_id: 'breed_id',
+                sex_id: 'sex_id',
+                visible: 'visible',
+                municipality: 'municipality',
+                lat: 'lat',
+                lon: 'lon',
+                city: 'city',
+                status: 'status',
+                sold_at: 'sold_at'
+            };
+
+            // Pre-process special fields
+            if (b.birth_year !== undefined) {
+                b.age = new Date().getFullYear() - b.birth_year;
+            }
+            if (b.video_url !== undefined && !b.video_urls) {
+                b.video_urls = [b.video_url];
+            }
+
+            for (const [key, col] of Object.entries(mappings)) {
+                if (b[key] !== undefined) {
+                    if (fields.some(f => f.startsWith(`${col} =`))) continue;
+                    fields.push(`${col} = $${idx++}`);
+                    values.push(b[key]);
+                }
+            }
+
+            fields.push(`updated_at = NOW()`);
+
+            if (fields.length > 1) {
+                const query = `UPDATE public.horse_listings SET ${fields.join(', ')} WHERE id = $1::uuid`;
+                await prisma.$queryRawUnsafe(query, ...values);
+            }
+
+            // Sync colors/disciplines ONLY if provided
             if (b.color_ids !== undefined) {
                 await prisma.$queryRawUnsafe(`DELETE FROM public.horse_listing_colors WHERE listing_id = $1::uuid`, id);
-                for (const cid of b.color_ids) {
-                    await prisma.$queryRawUnsafe(`INSERT INTO public.horse_listing_colors (listing_id, color_id) VALUES ($1::uuid, $2)`, id, cid);
+                if (Array.isArray(b.color_ids)) {
+                    for (const cid of b.color_ids) {
+                        await prisma.$queryRawUnsafe(`INSERT INTO public.horse_listing_colors (listing_id, color_id) VALUES ($1::uuid, $2)`, id, cid);
+                    }
                 }
             }
             if (b.discipline_ids !== undefined) {
                 await prisma.$queryRawUnsafe(`DELETE FROM public.horse_listing_disciplines WHERE listing_id = $1::uuid`, id);
-                for (const did of b.discipline_ids) {
-                    await prisma.$queryRawUnsafe(`INSERT INTO public.horse_listing_disciplines (listing_id, discipline_id) VALUES ($1::uuid, $2)`, id, did);
+                if (Array.isArray(b.discipline_ids)) {
+                    for (const did of b.discipline_ids) {
+                        await prisma.$queryRawUnsafe(`INSERT INTO public.horse_listing_disciplines (listing_id, discipline_id) VALUES ($1::uuid, $2)`, id, did);
+                    }
                 }
             }
 
             return { id };
         } catch (e) {
+            console.error(e);
             return reply.code(500).send({ error: 'Update failed' });
         }
     });
@@ -280,15 +328,19 @@ module.exports = async function listingsRoutes(fastify) {
         try {
             const {
                 user_id, equipmentType_ids, brand_ids, material_ids, condition_ids,
-                min_price, max_price, search, sort, limit = 50, offset = 0
+                min_price, max_price, search, sort, limit = 50, offset = 0, include_hidden
             } = req.query;
 
             let sql = `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar 
                        FROM public.equipment_listings l
                        LEFT JOIN public.profiles p ON p.user_id = l.user_id
-                       WHERE l.visible = true`;
+                       WHERE 1=1`;
             const params = [];
             let pIdx = 1;
+
+            if (include_hidden !== 'true') {
+                sql += ` AND l.visible = true`;
+            }
 
             if (user_id) {
                 sql += ` AND l.user_id = $${pIdx++}::uuid`;
@@ -328,7 +380,9 @@ module.exports = async function listingsRoutes(fastify) {
             }
 
             // Status visibility: available or sold recently (3 days)
-            sql += ` AND (l.status = 'available' OR (l.status = 'sold' AND l.sold_at >= NOW() - INTERVAL '3 days'))`;
+            if (include_hidden !== 'true') {
+                sql += ` AND (l.status = 'available' OR (l.status = 'sold' AND l.sold_at >= NOW() - INTERVAL '3 days'))`;
+            }
 
             // Sort
             if (sort === 'price_asc') sql += ` ORDER BY l.price ASC`;
@@ -427,27 +481,60 @@ module.exports = async function listingsRoutes(fastify) {
             if (!rows.length) return reply.code(404).send({ error: 'Not found' });
             if (rows[0].user_id !== userId) return reply.code(403).send({ error: 'Forbidden' });
 
-            await prisma.$queryRawUnsafe(
-                `UPDATE public.equipment_listings SET 
-                    title = $2, description = $3, price = $4, currency = $5, condition = $6, size = $7, country = $8, 
-                    images = $9, featured = $10, visible = $11, city = $12, lat = $13, lon = $14, municipality = $15, 
-                    brand_id = $16, material_id = $17, equipment_type_id = $18, custom_equipment_type = $19
-                WHERE id = $1::uuid`,
-                id, b.title, b.description, b.price || null, b.currency || 'EUR', b.condition, b.size || null,
-                b.country, b.images || [], b.featured || false, b.visible !== false, b.city || null,
-                Number(b.lat || 0), Number(b.lon || 0), b.municipality || null, b.brand_id || null,
-                b.material_id || null, b.equipment_type_id || null, b.custom_equipment_type || null
-            );
+            const fields = [];
+            const values = [id];
+            let idx = 2;
+
+            const mappings = {
+                title: 'title',
+                description: 'description',
+                price: 'price',
+                currency: 'currency',
+                condition: 'condition',
+                size: 'size',
+                country: 'country',
+                images: 'images',
+                featured: 'featured',
+                visible: 'visible',
+                city: 'city',
+                lat: 'lat',
+                lon: 'lon',
+                municipality: 'municipality',
+                brand_id: 'brand_id',
+                material_id: 'material_id',
+                equipment_type_id: 'equipment_type_id',
+                custom_equipment_type: 'custom_equipment_type',
+                status: 'status',
+                sold_at: 'sold_at'
+            };
+
+            for (const [key, col] of Object.entries(mappings)) {
+                if (b[key] !== undefined) {
+                    if (fields.some(f => f.startsWith(`${col} =`))) continue;
+                    fields.push(`${col} = $${idx++}`);
+                    values.push(b[key]);
+                }
+            }
+
+            fields.push(`updated_at = NOW()`);
+
+            if (fields.length > 1) {
+                const query = `UPDATE public.equipment_listings SET ${fields.join(', ')} WHERE id = $1::uuid`;
+                await prisma.$queryRawUnsafe(query, ...values);
+            }
 
             if (b.color_ids !== undefined) {
                 await prisma.$queryRawUnsafe(`DELETE FROM public.equipment_listing_colors WHERE listing_id = $1::uuid`, id);
-                for (const cid of b.color_ids) {
-                    await prisma.$queryRawUnsafe(`INSERT INTO public.equipment_listing_colors (listing_id, color_id) VALUES ($1::uuid, $2)`, id, cid);
+                if (Array.isArray(b.color_ids)) {
+                    for (const cid of b.color_ids) {
+                        await prisma.$queryRawUnsafe(`INSERT INTO public.equipment_listing_colors (listing_id, color_id) VALUES ($1::uuid, $2)`, id, cid);
+                    }
                 }
             }
 
             return { id };
         } catch (e) {
+            console.error(e);
             return reply.code(500).send({ error: 'Update failed' });
         }
     });
