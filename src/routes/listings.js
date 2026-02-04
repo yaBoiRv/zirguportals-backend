@@ -139,6 +139,14 @@ module.exports = async function listingsRoutes(fastify) {
                 `SELECT d.* FROM public.horse_disciplines d JOIN public.horse_listing_disciplines ld ON ld.discipline_id = d.id WHERE ld.listing_id = $1::uuid`,
                 id
             );
+            const temperaments = await prisma.$queryRawUnsafe(
+                `SELECT t.*, tr.name 
+                 FROM public.horse_temperament t 
+                 JOIN public.horse_listing_temperaments lt ON lt.temperament_id = t.id 
+                 LEFT JOIN public.horse_temperament_translations tr ON tr.temperament_id = t.id AND tr.lang_code = 'en'
+                 WHERE lt.listing_id = $1::uuid`,
+                id
+            );
 
             return {
                 ...r,
@@ -147,6 +155,7 @@ module.exports = async function listingsRoutes(fastify) {
                 video_url: r.video_urls?.[0] || null,
                 colors,
                 disciplines,
+                temperaments,
                 seller: {
                     name: r.seller_name,
                     username: r.seller_username,
@@ -173,13 +182,13 @@ module.exports = async function listingsRoutes(fastify) {
                 `INSERT INTO public.horse_listings (
                     user_id, title, description, price, currency, country, images, 
                     status, featured, age, height, video_urls, breed_id, sex_id, 
-                    visible, municipality, lat, lon, city
+                    visible, municipality, lat, lon, city, registration_id
                 ) VALUES (
-                    $1::uuid, $2, $3, $4, $5, $6, $7, 'available', $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+                    $1::uuid, $2, $3, $4, $5, $6, $7, 'available', $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
                 ) RETURNING id`,
                 userId, b.name || b.title, b.description, b.price || null, b.currency || 'EUR', b.country, b.images || [],
                 b.featured || false, age, b.height || null, video_urls, b.breed_id || null, b.sex_id || null,
-                b.visible !== false, b.municipality || null, Number(b.lat || 0), Number(b.lon || 0), b.city || null
+                b.visible !== false, b.municipality || null, Number(b.lat || 0), Number(b.lon || 0), b.city || null, b.registration_id || null
             );
             const listingId = result[0].id;
 
@@ -191,6 +200,11 @@ module.exports = async function listingsRoutes(fastify) {
             if (b.discipline_ids?.length) {
                 for (const did of b.discipline_ids) {
                     await prisma.$queryRawUnsafe(`INSERT INTO public.horse_listing_disciplines (listing_id, discipline_id) VALUES ($1::uuid, $2)`, listingId, did);
+                }
+            }
+            if (b.temperament_ids?.length) {
+                for (const tid of b.temperament_ids) {
+                    await prisma.$queryRawUnsafe(`INSERT INTO public.horse_listing_temperaments (listing_id, temperament_id) VALUES ($1::uuid, $2)`, listingId, tid);
                 }
             }
             return reply.code(201).send({ id: listingId });
@@ -234,7 +248,8 @@ module.exports = async function listingsRoutes(fastify) {
                 lon: 'lon',
                 city: 'city',
                 status: 'status',
-                sold_at: 'sold_at'
+                sold_at: 'sold_at',
+                registration_id: 'registration_id'
             };
 
             // Pre-process special fields
@@ -274,6 +289,14 @@ module.exports = async function listingsRoutes(fastify) {
                 if (Array.isArray(b.discipline_ids)) {
                     for (const did of b.discipline_ids) {
                         await prisma.$queryRawUnsafe(`INSERT INTO public.horse_listing_disciplines (listing_id, discipline_id) VALUES ($1::uuid, $2)`, id, did);
+                    }
+                }
+            }
+            if (b.temperament_ids !== undefined) {
+                await prisma.$queryRawUnsafe(`DELETE FROM public.horse_listing_temperaments WHERE listing_id = $1::uuid`, id);
+                if (Array.isArray(b.temperament_ids)) {
+                    for (const tid of b.temperament_ids) {
+                        await prisma.$queryRawUnsafe(`INSERT INTO public.horse_listing_temperaments (listing_id, temperament_id) VALUES ($1::uuid, $2)`, id, tid);
                     }
                 }
             }

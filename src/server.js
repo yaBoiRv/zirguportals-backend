@@ -451,6 +451,9 @@ fastify.register(servicesRoutes, { prefix: "/api/services" });
 const announcementsRoutes = require("./routes/announcements");
 fastify.register(announcementsRoutes, { prefix: "/api/announcements" });
 
+const forumRoutes = require("./routes/forums");
+fastify.register(forumRoutes, { prefix: "/api/forums" });
+
 
 
 fastify.get("/whoami", async (req) => {
