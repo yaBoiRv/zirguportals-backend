@@ -24,6 +24,10 @@ model User {
 
   conversations ConversationParticipant[]
   messages      Message[]
+  announcements Announcements[]
+  forumTopics   ForumTopic[]
+  forumReplies  ForumReply[]
+  forumLikes    ForumLike[]
 
   @@map("users")
   @@schema("auth")
@@ -416,5 +420,96 @@ model TrainerCertificationTranslation {
   certification   TrainerCertification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
   @@unique([certificationId, langCode])
   @@map("trainer_certification_translations")
+  @@schema("public")
+}
+
+model Announcements {
+  id          String    @id @default(uuid()) @db.Uuid
+  title       String
+  content     String
+  category    String
+  is_pinned   Boolean   @default(false) @map("is_pinned")
+  pinned_until DateTime? @map("pinned_until")
+  images      String[]
+  files       String[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  userId      String    @map("user_id") @db.Uuid
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@map("announcements")
+  @@schema("public")
+}
+
+model ForumTopic {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  content     String
+  category    String
+  userId      String   @map("user_id") @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  images      String[] @default([])
+  files       String[] @default([])
+  
+  likesCount   Int      @default(0) @map("likes_count")
+  repliesCount Int      @default(0) @map("replies_count")
+  viewsCount   Int      @default(0) @map("views_count")
+
+  replies     ForumReply[]
+  likes       ForumLike[]
+
+  @@map("forum_topics")
+  @@schema("public")
+}
+
+model ForumReply {
+  id              String   @id @default(uuid()) @db.Uuid
+  topicId         String   @map("topic_id") @db.Uuid
+  topic           ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  
+  userId          String   @map("user_id") @db.Uuid
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  content         String
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  images          String[] @default([])
+  files           String[] @default([])
+
+  parentId        String?  @map("parent_id") @db.Uuid
+  parent          ForumReply? @relation("ReplyToReply", fields: [parentId], references: [id])
+  children        ForumReply[] @relation("ReplyToReply")
+
+  replyToUserId   String?  @map("reply_to_user_id") @db.Uuid
+
+  likesCount      Int      @default(0) @map("likes_count")
+  likes           ForumLike[]
+
+  @@map("forum_replies")
+  @@schema("public")
+}
+
+model ForumLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  topicId   String?  @map("topic_id") @db.Uuid
+  topic     ForumTopic? @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  replyId   String?  @map("reply_id") @db.Uuid
+  reply     ForumReply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, topicId])
+  @@unique([userId, replyId])
+  @@map("forum_likes")
   @@schema("public")
 }

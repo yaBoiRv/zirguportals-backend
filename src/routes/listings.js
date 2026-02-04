@@ -27,20 +27,86 @@ module.exports = async function listingsRoutes(fastify) {
     // GET /listings/horses
     fastify.get('/horses', async (req, reply) => {
         try {
-            const userId = req.query.user_id;
-            let rows;
-            if (userId) {
-                rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.horse_listings WHERE user_id = $1::uuid ORDER BY created_at DESC`, userId);
-            } else {
-                rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.horse_listings WHERE visible = true ORDER BY created_at DESC LIMIT 50`);
+            const {
+                user_id, min_price, max_price, min_age, max_age, min_height, max_height,
+                breed_id, sex_id, search, sort, limit = 50, offset = 0
+            } = req.query;
+
+            let sql = `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar 
+                       FROM public.horse_listings l
+                       LEFT JOIN public.profiles p ON p.user_id = l.user_id
+                       WHERE l.visible = true`;
+            const params = [];
+            let pIdx = 1;
+
+            if (user_id) {
+                sql += ` AND l.user_id = $${pIdx++}::uuid`;
+                params.push(user_id);
             }
-            return rows.map(listing => ({
-                ...listing,
-                name: listing.title,
-                birth_year: listing.age ? (new Date().getFullYear() - listing.age) : null,
-                video_url: listing.video_urls?.[0] || null,
-            }));
+
+            if (min_price) { sql += ` AND l.price >= $${pIdx++}`; params.push(Number(min_price)); }
+            if (max_price) { sql += ` AND l.price <= $${pIdx++}`; params.push(Number(max_price)); }
+
+            if (min_age) {
+                // age stored as int? age (years).
+                // min_age filter means age >= min_age
+                sql += ` AND l.age >= $${pIdx++}`; params.push(Number(min_age));
+            }
+            if (max_age) { sql += ` AND l.age <= $${pIdx++}`; params.push(Number(max_age)); }
+
+            if (min_height) { sql += ` AND l.height >= $${pIdx++}`; params.push(Number(min_height)); }
+            if (max_height) { sql += ` AND l.height <= $${pIdx++}`; params.push(Number(max_height)); }
+
+            if (breed_id) { sql += ` AND l.breed_id = $${pIdx++}`; params.push(Number(breed_id)); }
+            if (sex_id) { sql += ` AND l.sex_id = $${pIdx++}`; params.push(Number(sex_id)); }
+
+            if (search) {
+                sql += ` AND (l.title ILIKE $${pIdx} OR l.description ILIKE $${pIdx})`;
+                params.push(`%${search}%`);
+                pIdx++;
+            }
+
+            // Status visibility
+            sql += ` AND (l.status = 'available' OR (l.status = 'sold' AND l.sold_at >= NOW() - INTERVAL '3 days'))`;
+
+            // Sort
+            if (sort === 'price_asc') sql += ` ORDER BY l.price ASC`;
+            else if (sort === 'price_desc') sql += ` ORDER BY l.price DESC`;
+            else if (sort === 'popular') sql += ` ORDER BY l.favorites_count DESC`;
+            else sql += ` ORDER BY l.created_at DESC`;
+
+            sql += ` LIMIT $${pIdx++} OFFSET $${pIdx++}`;
+            params.push(Number(limit), Number(offset));
+
+            // Main Query
+            const rows = await prisma.$queryRawUnsafe(sql, ...params);
+
+            // Count Query logic
+            const fromIndex = sql.indexOf('FROM');
+            const orderIndex = sql.lastIndexOf('ORDER BY');
+            const wherePart = sql.substring(fromIndex, orderIndex);
+            // Params excluding limit/offset
+            const countParams = params.slice(0, params.length - 2);
+
+            const countRes = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as cnt ${wherePart}`, ...countParams);
+            const count = Number(countRes[0]?.cnt || 0);
+
+            return {
+                data: rows.map(listing => ({
+                    ...listing,
+                    name: listing.title,
+                    birth_year: listing.age ? (new Date().getFullYear() - listing.age) : null,
+                    video_url: listing.video_urls?.[0] || null,
+                    seller: {
+                        name: listing.seller_name,
+                        username: listing.seller_username,
+                        avatar_url: listing.seller_avatar
+                    }
+                })),
+                count
+            };
         } catch (e) {
+            console.error('Fetch horses error:', e);
             return reply.code(500).send({ error: 'Failed to fetch listings' });
         }
     });
@@ -49,9 +115,15 @@ module.exports = async function listingsRoutes(fastify) {
     fastify.get('/horses/:id', async (req, reply) => {
         const { id } = req.params;
         try {
-            const rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.horse_listings WHERE id = $1::uuid`, id);
+            const rows = await prisma.$queryRawUnsafe(
+                `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar, p.phone as seller_phone, p.created_at as seller_member_since
+                 FROM public.horse_listings l
+                 LEFT JOIN public.profiles p ON p.user_id = l.user_id
+                 WHERE l.id = $1::uuid`,
+                id
+            );
             if (!rows.length) return reply.code(404).send({ error: 'Listing not found' });
-            const listing = rows[0];
+            const r = rows[0];
 
             const colors = await prisma.$queryRawUnsafe(
                 `SELECT c.* FROM public.horse_colors c JOIN public.horse_listing_colors lc ON lc.color_id = c.id WHERE lc.listing_id = $1::uuid`,
@@ -63,14 +135,22 @@ module.exports = async function listingsRoutes(fastify) {
             );
 
             return {
-                ...listing,
-                name: listing.title,
-                birth_year: listing.age ? (new Date().getFullYear() - listing.age) : null,
-                video_url: listing.video_urls?.[0] || null,
+                ...r,
+                name: r.title,
+                birth_year: r.age ? (new Date().getFullYear() - r.age) : null,
+                video_url: r.video_urls?.[0] || null,
                 colors,
                 disciplines,
+                seller: {
+                    name: r.seller_name,
+                    username: r.seller_username,
+                    avatar_url: r.seller_avatar,
+                    phone: r.seller_phone,
+                    created_at: r.seller_member_since
+                }
             };
         } catch (e) {
+            console.error('Fetch horse error:', e);
             return reply.code(500).send({ error: 'Database error' });
         }
     });
@@ -163,15 +243,33 @@ module.exports = async function listingsRoutes(fastify) {
     fastify.get('/equipment/:id', async (req, reply) => {
         const { id } = req.params;
         try {
-            const rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.equipment_listings WHERE id = $1::uuid`, id);
+            const rows = await prisma.$queryRawUnsafe(
+                `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar, p.phone as seller_phone, p.created_at as seller_member_since
+                 FROM public.equipment_listings l
+                 LEFT JOIN public.profiles p ON p.user_id = l.user_id
+                 WHERE l.id = $1::uuid`,
+                id
+            );
             if (!rows.length) return reply.code(404).send({ error: 'Listing not found' });
-            const listing = rows[0];
+            const r = rows[0];
+
             const colors = await prisma.$queryRawUnsafe(
                 `SELECT c.* FROM public.equipment_colors c JOIN public.equipment_listing_colors lc ON lc.color_id = c.id WHERE lc.listing_id = $1::uuid`,
                 id
             );
-            return { ...listing, colors };
+            return {
+                ...r,
+                colors,
+                seller: {
+                    name: r.seller_name,
+                    username: r.seller_username,
+                    avatar_url: r.seller_avatar,
+                    phone: r.seller_phone,
+                    created_at: r.seller_member_since
+                }
+            };
         } catch (e) {
+            console.error('Fetch equipment error:', e);
             return reply.code(500).send({ error: 'Database error' });
         }
     });
@@ -179,15 +277,111 @@ module.exports = async function listingsRoutes(fastify) {
     // GET /listings/equipment
     fastify.get('/equipment', async (req, reply) => {
         try {
-            const userId = req.query.user_id;
-            let rows;
-            if (userId) {
-                rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.equipment_listings WHERE user_id = $1::uuid ORDER BY created_at DESC`, userId);
-            } else {
-                rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.equipment_listings WHERE visible = true ORDER BY created_at DESC LIMIT 50`);
+            const {
+                user_id, equipmentType_ids, brand_ids, material_ids, condition_ids,
+                min_price, max_price, search, sort, limit = 50, offset = 0
+            } = req.query;
+
+            let sql = `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar 
+                       FROM public.equipment_listings l
+                       LEFT JOIN public.profiles p ON p.user_id = l.user_id
+                       WHERE l.visible = true`;
+            const params = [];
+            let pIdx = 1;
+
+            if (user_id) {
+                sql += ` AND l.user_id = $${pIdx++}::uuid`;
+                params.push(user_id);
             }
-            return rows.map(listing => ({ ...listing }));
+
+            // Helper to handle array filters
+            const addArrayFilter = (val, col) => {
+                if (!val) return;
+                // Parse comma-separated if string
+                const arr = Array.isArray(val) ? val : (typeof val === 'string' && val.includes(',') ? val.split(',') : [val]);
+                const numArr = arr.map(Number).filter(n => !isNaN(n));
+
+                if (numArr.length > 0) {
+                    sql += ` AND l.${col} = ANY($${pIdx++})`;
+                    params.push(numArr);
+                }
+            };
+
+            addArrayFilter(equipmentType_ids, 'equipment_type_id');
+            addArrayFilter(brand_ids, 'brand_id');
+            addArrayFilter(material_ids, 'material_id');
+            addArrayFilter(condition_ids, 'condition'); // Using 'condition' column based on insert logic
+
+            if (min_price) {
+                sql += ` AND l.price >= $${pIdx++}`;
+                params.push(Number(min_price));
+            }
+            if (max_price) {
+                sql += ` AND l.price <= $${pIdx++}`;
+                params.push(Number(max_price));
+            }
+            if (search) {
+                sql += ` AND (l.title ILIKE $${pIdx} OR l.description ILIKE $${pIdx})`;
+                params.push(`%${search}%`);
+                pIdx++;
+            }
+
+            // Status visibility: available or sold recently (3 days)
+            sql += ` AND (l.status = 'available' OR (l.status = 'sold' AND l.sold_at >= NOW() - INTERVAL '3 days'))`;
+
+            // Sort
+            if (sort === 'price_asc') sql += ` ORDER BY l.price ASC`;
+            else if (sort === 'price_desc') sql += ` ORDER BY l.price DESC`;
+            else if (sort === 'popular') sql += ` ORDER BY l.favorites_count DESC`;
+            else sql += ` ORDER BY l.created_at DESC`;
+
+            // Limit/Offset
+            sql += ` LIMIT $${pIdx++} OFFSET $${pIdx++}`;
+            params.push(Number(limit), Number(offset));
+
+            // Execute Main Query
+            const rows = await prisma.$queryRawUnsafe(sql, ...params);
+
+            // Execute Count Query
+            // Reconstruct WHERE clause from params (excluding limit/offset which are last 2)
+            const countParams = params.slice(0, params.length - 2);
+            // We need to rebuild the WHERE string part.
+            // A safer way is to construct 'whereSql' separately string variable.
+
+            // Let's do it cleaner by extracting 'where' logic if possible, or just copy-paste logic for count query construction?
+            // To ensure consistency, I'll assume the SQL string construction is deterministic.
+            // I'll reconstruct count SQL using same logic logic.
+
+            let countSql = `SELECT COUNT(*) as cnt FROM public.equipment_listings l WHERE l.visible = true`;
+            let cIdx = 1;
+            // Repeat logic or better: Splice 'sql' string?
+            // sql starts with "SELECT ... FROM ... WHERE ... ORDER BY ... LIMIT ..."
+            // I want "SELECT COUNT(*) FROM ... WHERE ..."
+            // The WHERE clause starts at index of "WHERE".
+
+            const fromIndex = sql.indexOf('FROM');
+            const orderIndex = sql.lastIndexOf('ORDER BY');
+            const wherePart = sql.substring(fromIndex, orderIndex); // includes FROM ... WHERE ...
+
+            // Note: params mapping relies on $1, $2, etc. If I reuse 'wherePart', the indices are correct relative to 'params'.
+            const countQuery = `SELECT COUNT(*) as cnt ${wherePart}`;
+
+            const countRes = await prisma.$queryRawUnsafe(countQuery, ...countParams);
+            const count = Number(countRes[0]?.cnt || 0);
+
+            return {
+                data: rows.map(r => ({
+                    ...r,
+                    seller: {
+                        name: r.seller_name,
+                        username: r.seller_username,
+                        avatar_url: r.seller_avatar
+                    }
+                })),
+                count
+            };
         } catch (e) {
+            console.error('List equipment error:', e);
             return reply.code(500).send({ error: 'Failed to fetch equipment listings' });
         }
     });

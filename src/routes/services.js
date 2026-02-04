@@ -96,15 +96,15 @@ module.exports = async function servicesRoutes(fastify) {
                     user_id, full_name, bio, hourly_rate, specialty, specialties,
                     regions_served, phone, profile_photo_url, visible, pricing_type, custom_specialty
                 ) VALUES (
-                    $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
-                ) RETURNING id`,
+                    $1::uuid, $2, $3, $4, $5, $6::text[], $7::jsonb, $8, $9, $10, $11, $12
+                ) RETURNING *`,
                 userId,
                 b.full_name,
                 b.bio,
                 b.hourly_rate || null,
-                b.specialty || '', // mandatory?
+                b.specialty || '',
                 b.specialties || [],
-                b.regions_served || [],
+                JSON.stringify(b.regions_served || []),
                 b.phone || null,
                 b.profile_photo_url || null,
                 b.visible !== false,
@@ -114,7 +114,7 @@ module.exports = async function servicesRoutes(fastify) {
             return reply.code(201).send(result[0]);
         } catch (e) {
             console.error('Create service error:', e);
-            return reply.code(500).send({ error: 'Failed to create service' });
+            return reply.code(500).send({ error: 'Failed to create service', message: e.message });
         }
     });
 
@@ -131,8 +131,8 @@ module.exports = async function servicesRoutes(fastify) {
 
             await prisma.$queryRawUnsafe(
                 `UPDATE public.services SET
-                    full_name = $2, bio = $3, hourly_rate = $4, specialty = $5, specialties = $6,
-                    regions_served = $7, phone = $8, profile_photo_url = $9, visible = $10,
+                    full_name = $2, bio = $3, hourly_rate = $4, specialty = $5, specialties = $6::text[],
+                    regions_served = $7::jsonb, phone = $8, profile_photo_url = $9, visible = $10,
                     pricing_type = $11, custom_specialty = $12, updated_at = NOW()
                 WHERE id = $1::uuid`,
                 id,
@@ -141,7 +141,7 @@ module.exports = async function servicesRoutes(fastify) {
                 b.hourly_rate || null,
                 b.specialty || '',
                 b.specialties || [],
-                b.regions_served || [],
+                JSON.stringify(b.regions_served || []),
                 b.phone || null,
                 b.profile_photo_url || null,
                 b.visible !== false,
@@ -152,7 +152,7 @@ module.exports = async function servicesRoutes(fastify) {
             return { id };
         } catch (e) {
             console.error('Update service error:', e);
-            return reply.code(500).send({ error: 'Failed to update service' });
+            return reply.code(500).send({ error: 'Failed to update service', message: e.message });
         }
     });
 

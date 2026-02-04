@@ -411,6 +411,31 @@ fastify.get("/auth/google/callback", async (req, reply) => {
 
 fastify.get("/health", async () => ({ ok: true }));
 
+fastify.get("/diag", async (req, reply) => {
+  try {
+    const horses = await prisma.$queryRawUnsafe('SELECT count(*) FROM public.horse_listings');
+    const equipment = await prisma.$queryRawUnsafe('SELECT count(*) FROM public.equipment_listings');
+    const visibleHorses = await prisma.$queryRawUnsafe('SELECT count(*) FROM public.horse_listings WHERE visible = true');
+    const visibleEquipment = await prisma.$queryRawUnsafe('SELECT count(*) FROM public.equipment_listings WHERE visible = true');
+    const trainers = await prisma.$queryRawUnsafe('SELECT count(*) FROM public.trainers');
+    const services = await prisma.$queryRawUnsafe('SELECT count(*) FROM public.services');
+
+    return {
+      status: 'ok',
+      counts: {
+        horses: horses[0].count,
+        visibleHorses: visibleHorses[0].count,
+        equipment: equipment[0].count,
+        visibleEquipment: visibleEquipment[0].count,
+        trainers: trainers[0].count,
+        services: services[0].count
+      }
+    };
+  } catch (err) {
+    return reply.code(500).send({ error: err.message });
+  }
+});
+
 fastify.register(dictionariesRoutes, { prefix: "/dictionaries" });
 fastify.register(dictionariesRoutes, { prefix: "/api/dictionaries" });
 
@@ -422,6 +447,10 @@ fastify.register(trainersRoutes, { prefix: "/api/trainers" });
 
 fastify.register(servicesRoutes, { prefix: "/services" });
 fastify.register(servicesRoutes, { prefix: "/api/services" });
+
+const announcementsRoutes = require("./routes/announcements");
+fastify.register(announcementsRoutes, { prefix: "/api/announcements" });
+
 
 
 fastify.get("/whoami", async (req) => {
