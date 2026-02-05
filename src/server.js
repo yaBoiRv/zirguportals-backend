@@ -996,6 +996,20 @@ const start = async () => {
     });
 
 
+
+    // --- FORCE FIX DATA INTEGRITY ON STARTUP ---
+    try {
+      fastify.log.info("Checking data integrity for forum_topics...");
+      // Fix NULL timestamps which violate Prisma schema
+      const updatedCreated = await prisma.$executeRawUnsafe(`UPDATE "public"."forum_topics" SET "created_at" = NOW() WHERE "created_at" IS NULL`);
+      const updatedUpdated = await prisma.$executeRawUnsafe(`UPDATE "public"."forum_topics" SET "updated_at" = NOW() WHERE "updated_at" IS NULL`);
+
+      fastify.log.info({ updatedCreated, updatedUpdated }, "Data integrity check completed.");
+    } catch (err) {
+      fastify.log.error(err, "Data integrity fix failed (ignoring if benign).");
+    }
+    // -------------------------------------------
+
     await fastify.listen({ port, host: "0.0.0.0" });
 
     fastify.log.info(`API listening on port ${port}`);
