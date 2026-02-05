@@ -140,6 +140,16 @@ module.exports = async function dictionariesRoutes(fastify) {
 
       case 'service-specialties':
         try {
+          console.log('Fetching service specialties for lang:', lang);
+          // Simplified query to debug
+          console.log('Fetching service specialties (simplified) for lang:', lang);
+          const rows = await prisma.$queryRawUnsafe(
+            `SELECT b.id, b.specialty_key as key, b.specialty_key as name
+             FROM public.service_specialties b
+             ORDER BY b.specialty_key ASC`
+          );
+
+          /*
           const rows = await prisma.$queryRawUnsafe(
             `SELECT b.id::text as id, b.specialty_key as key, COALESCE(t.name, b.specialty_key) AS name
             FROM public.service_specialties b
@@ -148,10 +158,11 @@ module.exports = async function dictionariesRoutes(fastify) {
             ORDER BY COALESCE(t.name, b.specialty_key) ASC`,
             lang
           );
-
+          */
+          console.log('Service specialties rows:', rows.length);
           return rows.map(r => ({ id: r.id, key: r.key, name: r.name }));
         } catch (err) {
-          console.error('Error fetching service-specialties:', err);
+          console.error('CRITICAL ERROR fetching service-specialties:', err);
           return [];
         }
 
