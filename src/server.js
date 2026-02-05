@@ -449,13 +449,15 @@ fastify.register(servicesRoutes, { prefix: "/services" });
 fastify.register(servicesRoutes, { prefix: "/api/services" });
 
 const announcementsRoutes = require("./routes/announcements");
+fastify.register(announcementsRoutes, { prefix: "/announcements" });
 fastify.register(announcementsRoutes, { prefix: "/api/announcements" });
 
 const forumRoutes = require("./routes/forums");
+fastify.register(forumRoutes, { prefix: "/forums" });
 fastify.register(forumRoutes, { prefix: "/api/forums" });
 
 // DEBUG ROUTE - Verify deployment
-fastify.get("/api/forums-ping", async () => ({ status: "pong", version: "v2-debug" }));
+fastify.get("/api/forums-ping", async () => ({ status: "pong", version: "v3-double-register" }));
 
 
 
