@@ -100,6 +100,7 @@ module.exports = async function listingsRoutes(fastify) {
             return {
                 data: rows.map(listing => ({
                     ...listing,
+                    category: 'horses', // Add category for URL generation
                     name: listing.title,
                     birth_year: listing.age ? (new Date().getFullYear() - listing.age) : null,
                     video_url: listing.video_urls?.[0] || null,
@@ -150,6 +151,7 @@ module.exports = async function listingsRoutes(fastify) {
 
             return {
                 ...r,
+                category: 'horses', // Add category for URL generation
                 name: r.title,
                 birth_year: r.age ? (new Date().getFullYear() - r.age) : null,
                 video_url: r.video_urls?.[0] || null,
@@ -331,6 +333,7 @@ module.exports = async function listingsRoutes(fastify) {
             );
             return {
                 ...r,
+                category: 'equipment', // Add category for URL generation
                 colors,
                 seller: {
                     name: r.seller_name,
@@ -450,6 +453,7 @@ module.exports = async function listingsRoutes(fastify) {
             return {
                 data: rows.map(r => ({
                     ...r,
+                    category: 'equipment', // Add category for URL generation
                     seller: {
                         name: r.seller_name,
                         username: r.seller_username,
