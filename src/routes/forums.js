@@ -57,9 +57,9 @@ module.exports = async function forumRoutes(fastify) {
                 data: items.map(t => ({
                     ...t,
                     author: {
-                        name: t.user.profile?.name,
-                        username: t.user.profile?.username,
-                        avatar_url: t.user.profile?.avatarUrl
+                        name: t.user?.profile?.name,
+                        username: t.user?.profile?.username,
+                        avatar_url: t.user?.profile?.avatarUrl
                     },
                     replies_count: t._count.replies,
                     likes_count: t._count.likes
