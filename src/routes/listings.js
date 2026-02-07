@@ -61,8 +61,41 @@ module.exports = async function listingsRoutes(fastify) {
             if (min_height) { sql += ` AND l.height >= $${pIdx++}`; params.push(Number(min_height)); }
             if (max_height) { sql += ` AND l.height <= $${pIdx++}`; params.push(Number(max_height)); }
 
-            if (breed_id) { sql += ` AND l.breed_id = $${pIdx++}`; params.push(Number(breed_id)); }
-            if (sex_id) { sql += ` AND l.sex_id = $${pIdx++}`; params.push(Number(sex_id)); }
+            // Helper to handle array filters
+            const addArrayFilter = (val, col) => {
+                if (!val) return;
+                const arr = Array.isArray(val) ? val : (typeof val === 'string' && val.includes(',') ? val.split(',') : [val]);
+                const numArr = arr.map(Number).filter(n => !isNaN(n));
+                if (numArr.length > 0) {
+                    sql += ` AND l.${col} = ANY($${pIdx++})`;
+                    params.push(numArr);
+                }
+            };
+
+            // Support both singular (legacy) and plural query params
+            const breedIds = req.query.breed_ids || (breed_id ? [breed_id] : null);
+            const sexIds = req.query.sex_ids || (sex_id ? [sex_id] : null);
+            const colorIds = req.query.color_ids;
+            const disciplineIds = req.query.discipline_ids;
+            const temperamentIds = req.query.temperament_ids;
+
+            addArrayFilter(breedIds, 'breed_id');
+            addArrayFilter(sexIds, 'sex_id');
+
+            // Many-to-many filters
+            const addJoinFilter = (ids, table, col) => {
+                if (!ids) return;
+                const arr = Array.isArray(ids) ? ids : (typeof ids === 'string' && ids.includes(',') ? ids.split(',') : [ids]);
+                const numArr = arr.map(Number).filter(n => !isNaN(n));
+                if (numArr.length > 0) {
+                    sql += ` AND EXISTS (SELECT 1 FROM public.${table} sub WHERE sub.listing_id = l.id AND sub.${col} = ANY($${pIdx++}))`;
+                    params.push(numArr);
+                }
+            };
+
+            addJoinFilter(colorIds, 'horse_listing_colors', 'color_id');
+            addJoinFilter(disciplineIds, 'horse_listing_disciplines', 'discipline_id');
+            addJoinFilter(temperamentIds, 'horse_listing_temperaments', 'temperament_id');
 
             if (search) {
                 sql += ` AND (l.title ILIKE $${pIdx} OR l.description ILIKE $${pIdx})`;
@@ -357,7 +390,8 @@ module.exports = async function listingsRoutes(fastify) {
                 min_price, max_price, search, sort, limit = 50, offset = 0, include_hidden
             } = req.query;
 
-            let sql = `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar 
+            let sql = `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar,
+                              ARRAY(SELECT color_id FROM public.equipment_listing_colors WHERE listing_id = l.id) as color_ids
                        FROM public.equipment_listings l
                        LEFT JOIN public.profiles p ON p.user_id = l.user_id
                        WHERE 1=1`;
