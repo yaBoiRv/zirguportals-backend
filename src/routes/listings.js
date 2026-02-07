@@ -122,7 +122,8 @@ module.exports = async function listingsRoutes(fastify) {
             const rows = await prisma.$queryRawUnsafe(sql, ...params);
 
             // Count Query logic
-            const fromIndex = sql.indexOf('FROM');
+            // Use specific table name to avoid matching FROM in subqueries
+            const fromIndex = sql.indexOf('FROM public.horse_listings');
             const orderIndex = sql.lastIndexOf('ORDER BY');
             const wherePart = sql.substring(fromIndex, orderIndex);
             // Params excluding limit/offset
@@ -498,7 +499,8 @@ module.exports = async function listingsRoutes(fastify) {
             const rows = await prisma.$queryRawUnsafe(sql, ...params);
 
             // Execute Count Query
-            const fromIndex = sql.indexOf('FROM');
+            // Use specific table name to avoid matching FROM in subqueries
+            const fromIndex = sql.indexOf('FROM public.equipment_listings');
             const orderIndex = sql.lastIndexOf('ORDER BY');
             const wherePart = sql.substring(fromIndex, orderIndex);
 
