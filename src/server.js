@@ -28,6 +28,9 @@ const servicesRoutes = require("./routes/services");
 const prisma = new PrismaClient();
 fastify.decorate('prisma', prisma);
 
+fastify.get('/version', async () => {
+  return { version: '1.0.3-fixed', timestamp: new Date().toISOString() };
+});
 
 
 const makeS3 = (endpoint) =>

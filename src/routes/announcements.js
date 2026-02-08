@@ -100,23 +100,22 @@ module.exports = async function announcementsRoutes(fastify) {
     });
 
     // POST /announcements
+    // POST /announcements
     fastify.post('/', { preHandler: requireAuth }, async (req, reply) => {
-        const { title, content, category, is_pinned, pinned_until, images, files } = req.body;
+        const { title, content, category, is_pinned, pinned_until } = req.body;
 
         try {
-            const data = {
-                title,
-                content,
-                category,
-                is_pinned: is_pinned || false,
-                pinned_until: pinned_until ? new Date(pinned_until) : null,
-                userId: req.user.id,
-            };
-
-            console.log('Creating announcement with data:', JSON.stringify(data, null, 2));
-            console.log('req.user:', JSON.stringify(req.user, null, 2));
-
-            const announcement = await prisma.announcements.create({ data });
+            const announcement = await prisma.announcements.create({
+                data: {
+                    title,
+                    content,
+                    category,
+                    is_pinned: is_pinned || false,
+                    pinned_until: pinned_until ? new Date(pinned_until) : null,
+                    userId: req.user.id,
+                    // Rely on DB defaults for images/files
+                }
+            });
 
             return {
                 ...announcement,
