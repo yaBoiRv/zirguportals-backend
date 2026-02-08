@@ -25,7 +25,26 @@ const listingsRoutes = require("./routes/listings");
 const trainersRoutes = require("./routes/trainers");
 const servicesRoutes = require("./routes/services");
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: [
+    {
+      emit: 'stdout',
+      level: 'query',
+    },
+    {
+      emit: 'stdout',
+      level: 'error',
+    },
+    {
+      emit: 'stdout',
+      level: 'info',
+    },
+    {
+      emit: 'stdout',
+      level: 'warn',
+    },
+  ],
+});
 fastify.decorate('prisma', prisma);
 
 fastify.get('/version', async () => {
