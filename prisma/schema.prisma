@@ -486,8 +486,6 @@ model ForumReply {
   parent          ForumReply? @relation("ReplyToReply", fields: [parentId], references: [id])
   children        ForumReply[] @relation("ReplyToReply")
 
-  replyToUserId   String?  @map("reply_to_user_id") @db.Uuid
-
   likesCount      Int      @default(0) @map("likes_count")
   likes           ForumLike[]
 
