@@ -104,18 +104,26 @@ module.exports = async function announcementsRoutes(fastify) {
         const { title, content, category, is_pinned, pinned_until, images, files } = req.body;
 
         try {
-            const announcement = await prisma.announcements.create({
-                data: {
-                    title,
-                    content,
-                    category,
-                    is_pinned: is_pinned || false,
-                    pinned_until: pinned_until ? new Date(pinned_until) : null,
-                    images: images || [],
-                    files: files || [],
-                    userId: req.user.id
-                }
-            });
+            // Build data object conditionally to avoid PostgreSQL array syntax issues
+            const data = {
+                title,
+                content,
+                category,
+                is_pinned: is_pinned || false,
+                pinned_until: pinned_until ? new Date(pinned_until) : null,
+                userId: req.user.id
+            };
+
+            // Only add images/files if they're provided and non-empty
+            if (images && images.length > 0) {
+                data.images = images;
+            }
+            if (files && files.length > 0) {
+                data.files = files;
+            }
+
+            const announcement = await prisma.announcements.create({ data });
+
             return {
                 ...announcement,
                 user_id: announcement.userId,
@@ -123,7 +131,7 @@ module.exports = async function announcementsRoutes(fastify) {
                 pinned_until: announcement.pinned_until
             };
         } catch (e) {
-            console.error(e);
+            console.error('Error creating announcement:', e);
             return reply.code(500).send({ error: 'Failed to create announcement' });
         }
     });
