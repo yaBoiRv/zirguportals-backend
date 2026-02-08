@@ -48,7 +48,7 @@ const prisma = new PrismaClient({
 fastify.decorate('prisma', prisma);
 
 fastify.get('/version', async () => {
-  return { version: '1.2.0-final-announcements', timestamp: new Date().toISOString() };
+  return { version: '1.2.1-restore-create-images', timestamp: new Date().toISOString() };
 });
 
 

@@ -102,7 +102,7 @@ module.exports = async function announcementsRoutes(fastify) {
     // POST /announcements
     // POST /announcements
     fastify.post('/', { preHandler: requireAuth }, async (req, reply) => {
-        const { title, content, category, is_pinned, pinned_until } = req.body;
+        const { title, content, category, is_pinned, pinned_until, images, files } = req.body;
 
         try {
             const announcement = await prisma.announcements.create({
@@ -113,7 +113,8 @@ module.exports = async function announcementsRoutes(fastify) {
                     is_pinned: is_pinned || false,
                     pinned_until: pinned_until ? new Date(pinned_until) : null,
                     userId: req.user.id,
-                    // Rely on DB defaults for images/files
+                    images: images || [],
+                    files: files || []
                 }
             });
 
