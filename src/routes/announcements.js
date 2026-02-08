@@ -104,17 +104,19 @@ module.exports = async function announcementsRoutes(fastify) {
         const { title, content, category, is_pinned, pinned_until, images, files } = req.body;
 
         try {
-            const announcement = await prisma.announcements.create({
-                data: {
-                    title,
-                    content,
-                    category,
-                    is_pinned: is_pinned || false,
-                    pinned_until: pinned_until ? new Date(pinned_until) : null,
-                    userId: req.user.id,
-                    // Don't include images/files at all - let DB defaults handle it
-                }
-            });
+            const data = {
+                title,
+                content,
+                category,
+                is_pinned: is_pinned || false,
+                pinned_until: pinned_until ? new Date(pinned_until) : null,
+                userId: req.user.id,
+            };
+
+            console.log('Creating announcement with data:', JSON.stringify(data, null, 2));
+            console.log('req.user:', JSON.stringify(req.user, null, 2));
+
+            const announcement = await prisma.announcements.create({ data });
 
             return {
                 ...announcement,
