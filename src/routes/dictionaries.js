@@ -136,6 +136,7 @@ module.exports = async function dictionariesRoutes(fastify) {
           table: 'announcement_categories',
           trTable: 'announcement_category_translations',
           trFk: 'category_id',
+          iconColumn: 'icon',
         }, lang);
 
       case 'service-specialties':
