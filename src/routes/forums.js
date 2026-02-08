@@ -197,7 +197,6 @@ module.exports = async function forumRoutes(fastify) {
                     content,
                     userId,
                     parentId: parent_id,
-                    replyToUserId: reply_to_user_id,
                     images,
                     files
                 },
