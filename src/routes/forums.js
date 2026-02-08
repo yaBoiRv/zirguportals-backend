@@ -98,4 +98,131 @@ module.exports = async function forumRoutes(fastify) {
             return reply.code(500).send({ error: 'Failed to create topic' });
         }
     });
+
+    // GET /forums/topics/:id - Get single topic
+    fastify.get('/topics/:id', async (req, reply) => {
+        const { id } = req.params;
+        try {
+            const topic = await prisma.forumTopic.findUnique({
+                where: { id },
+                include: {
+                    user: {
+                        include: {
+                            profile: {
+                                select: { name: true, username: true, avatarUrl: true }
+                            }
+                        }
+                    },
+                    _count: {
+                        select: { replies: true, likes: true }
+                    }
+                }
+            });
+
+            if (!topic) {
+                return reply.code(404).send({ error: 'Topic not found' });
+            }
+
+            return {
+                ...topic,
+                author: {
+                    name: topic.user?.profile?.name,
+                    username: topic.user?.profile?.username,
+                    avatar_url: topic.user?.profile?.avatarUrl
+                },
+                replies_count: topic._count.replies,
+                likes_count: topic._count.likes
+            };
+        } catch (e) {
+            console.error(e);
+            return reply.code(500).send({ error: 'Failed to fetch topic' });
+        }
+    });
+
+    // GET /forums/topics/:id/replies - Get all replies for a topic
+    fastify.get('/topics/:id/replies', async (req, reply) => {
+        const { id } = req.params;
+        try {
+            const replies = await prisma.forumReply.findMany({
+                where: { topicId: id },
+                orderBy: { createdAt: 'asc' },
+                include: {
+                    user: {
+                        include: {
+                            profile: {
+                                select: { name: true, username: true, avatarUrl: true }
+                            }
+                        }
+                    },
+                    _count: {
+                        select: { likes: true }
+                    }
+                }
+            });
+
+            // Map replies and fetch reply_to_profile manually if needed (or skip for now)
+            // Since replyToUser relation is missing in Prisma schema, we can't include it directly.
+            // For now, we'll return null for reply_to_profile to prevent crashes.
+
+            return replies.map(r => ({
+                ...r,
+                profiles: r.user?.profile ? {
+                    name: r.user.profile.name,
+                    username: r.user.profile.username,
+                    avatar_url: r.user.profile.avatarUrl
+                } : null,
+                reply_to_profile: null, // Relation missing, skip for now
+                likes_count: r._count.likes
+            }));
+        } catch (e) {
+            console.error(e);
+            return reply.code(500).send({ error: 'Failed to fetch replies' });
+        }
+    });
+
+    // POST /forums/topics/:id/replies - Create a new reply
+    fastify.post('/topics/:id/replies', { preHandler: requireAuth }, async (req, reply) => {
+        const { id } = req.params;
+        const { content, images = [], files = [], parent_id = null, reply_to_user_id = null } = req.body;
+        const userId = req.user.id;
+
+        if (!content) {
+            return reply.code(400).send({ error: 'Content is required' });
+        }
+
+        try {
+            const replyRecord = await prisma.forumReply.create({
+                data: {
+                    topicId: id,
+                    content,
+                    userId,
+                    parentId: parent_id,
+                    replyToUserId: reply_to_user_id,
+                    images,
+                    files
+                },
+                include: {
+                    user: {
+                        include: {
+                            profile: {
+                                select: { name: true, username: true, avatarUrl: true }
+                            }
+                        }
+                    }
+                }
+            });
+
+            return {
+                ...replyRecord,
+                profiles: replyRecord.user?.profile ? {
+                    name: replyRecord.user.profile.name,
+                    username: replyRecord.user.profile.username,
+                    avatar_url: replyRecord.user.profile.avatarUrl
+                } : null
+            };
+        } catch (e) {
+            console.error(e);
+            return reply.code(500).send({ error: 'Failed to create reply' });
+        }
+    });
 };
