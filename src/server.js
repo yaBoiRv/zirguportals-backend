@@ -142,9 +142,21 @@ fastify.get("/api/profile/me", { preHandler: requireAuth }, async (req, reply) =
         first_login_done: false,
       },
     },
+    include: {
+      user: {
+        select: { role: true }
+      }
+    }
   });
 
-  return reply.send({ profile });
+  // Flatten role
+  const profileWithRole = {
+    ...profile,
+    role: profile.user?.role || 'user',
+    user: undefined // remove nested user object
+  };
+
+  return reply.send({ profile: profileWithRole });
 });
 
 
