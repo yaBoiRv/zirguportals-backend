@@ -48,10 +48,8 @@ const prisma = new PrismaClient({
 fastify.decorate('prisma', prisma);
 
 fastify.get('/version', async () => {
-  return { version: '1.1.3-fix-images', timestamp: new Date().toISOString() };
+  return { version: '1.2.0-final-announcements', timestamp: new Date().toISOString() };
 });
-
-fastify.register(require('./routes/debug'));
 
 
 const makeS3 = (endpoint) =>
