@@ -61,7 +61,7 @@ module.exports = async function announcementsRoutes(fastify) {
                 ...a,
                 profiles: a.user?.profile || null,
                 created_at: a.createdAt, // Map for frontend
-                pinned_until: a.pinnedUntil, // Map for frontend
+                pinned_until: a.pinned_until, // Map for frontend
                 // is_pinned name matches
             }));
 
@@ -97,7 +97,7 @@ module.exports = async function announcementsRoutes(fastify) {
                 ...item,
                 profiles: item.user?.profile || null,
                 created_at: item.createdAt,
-                pinned_until: item.pinnedUntil
+                pinned_until: item.pinned_until
             };
         } catch (e) {
             return reply.code(500).send({ error: 'Database error' });
@@ -115,7 +115,7 @@ module.exports = async function announcementsRoutes(fastify) {
                     content,
                     category,
                     is_pinned: is_pinned || false,
-                    pinnedUntil: pinned_until ? new Date(pinned_until) : null,
+                    pinned_until: pinned_until ? new Date(pinned_until) : null,
                     images: images || [],
                     files: files || [],
                     userId: req.user.id
@@ -141,7 +141,7 @@ module.exports = async function announcementsRoutes(fastify) {
                     content,
                     category,
                     is_pinned,
-                    pinnedUntil: pinned_until ? new Date(pinned_until) : null,
+                    pinned_until: pinned_until ? new Date(pinned_until) : null,
                     images,
                     files
                 }
