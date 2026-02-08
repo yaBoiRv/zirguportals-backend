@@ -104,25 +104,17 @@ module.exports = async function announcementsRoutes(fastify) {
         const { title, content, category, is_pinned, pinned_until, images, files } = req.body;
 
         try {
-            // Build data object conditionally to avoid PostgreSQL array syntax issues
-            const data = {
-                title,
-                content,
-                category,
-                is_pinned: is_pinned || false,
-                pinned_until: pinned_until ? new Date(pinned_until) : null,
-                userId: req.user.id
-            };
-
-            // Only add images/files if they're provided and non-empty
-            if (images && images.length > 0) {
-                data.images = images;
-            }
-            if (files && files.length > 0) {
-                data.files = files;
-            }
-
-            const announcement = await prisma.announcements.create({ data });
+            const announcement = await prisma.announcements.create({
+                data: {
+                    title,
+                    content,
+                    category,
+                    is_pinned: is_pinned || false,
+                    pinned_until: pinned_until ? new Date(pinned_until) : null,
+                    userId: req.user.id,
+                    // Don't include images/files at all - let DB defaults handle it
+                }
+            });
 
             return {
                 ...announcement,
