@@ -482,7 +482,7 @@ model TrainerCertificationTranslation {
 }
 
 model Announcements {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id           String    @id @default(uuid()) @db.Uuid
   title        String
   content      String
   category     String    @default("general")
@@ -503,7 +503,7 @@ model Announcements {
 }
 
 model ForumTopic {
-  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id            String        @id @default(uuid()) @db.Uuid
   title         String
   content       String
   category      String?       @default("general")
