@@ -48,7 +48,7 @@ const prisma = new PrismaClient({
 fastify.decorate('prisma', prisma);
 
 fastify.get('/version', async () => {
-  return { version: '1.0.3-fixed', timestamp: new Date().toISOString() };
+  return { version: '1.0.5-optional-schema', timestamp: new Date().toISOString() };
 });
 
 

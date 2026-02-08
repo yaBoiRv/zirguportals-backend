@@ -490,8 +490,8 @@ model Announcements {
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   userId       String    @map("user_id") @db.Uuid
-  images       String[]  @default([])
-  files        String[]  @default([])
+  images       String[]?
+  files        String[]?
   pinned_until DateTime? @map("pinned_until") @db.Timestamptz(6)
   user         Profile   @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "fk_announcements_user")
 
