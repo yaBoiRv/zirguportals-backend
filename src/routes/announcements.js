@@ -42,14 +42,11 @@ module.exports = async function announcementsRoutes(fastify) {
                     take: Number(limit),
                     skip: Number(offset),
                     include: {
+                        // "user" relation points to Profile model in schema
                         user: {
-                            include: {
-                                profile: {
-                                    select: {
-                                        name: true,
-                                        username: true
-                                    }
-                                }
+                            select: {
+                                name: true,
+                                username: true
                             }
                         }
                     }
@@ -59,16 +56,17 @@ module.exports = async function announcementsRoutes(fastify) {
 
             const mapped = items.map(a => ({
                 ...a,
-                profiles: a.user?.profile || null,
+                user_id: a.userId, // Map for frontend
+                profiles: a.user || null, // a.user is Profile data
                 created_at: a.createdAt, // Map for frontend
                 pinned_until: a.pinned_until, // Map for frontend
-                // is_pinned name matches
             }));
 
+            console.log(`Announcements query: limit=${limit}, offset=${offset}, where=`, JSON.stringify(where));
             return { data: mapped, count };
         } catch (e) {
             console.error('Announcements fetch error:', e);
-            return reply.code(500).send({ error: 'Database error' });
+            return reply.code(500).send({ error: e.message || 'Database error', stack: e.stack });
         }
     });
 
@@ -80,13 +78,9 @@ module.exports = async function announcementsRoutes(fastify) {
                 where: { id },
                 include: {
                     user: {
-                        include: {
-                            profile: {
-                                select: {
-                                    name: true,
-                                    username: true
-                                }
-                            }
+                        select: {
+                            name: true,
+                            username: true
                         }
                     }
                 }
@@ -95,7 +89,8 @@ module.exports = async function announcementsRoutes(fastify) {
 
             return {
                 ...item,
-                profiles: item.user?.profile || null,
+                user_id: item.userId,
+                profiles: item.user || null,
                 created_at: item.createdAt,
                 pinned_until: item.pinned_until
             };
@@ -121,7 +116,12 @@ module.exports = async function announcementsRoutes(fastify) {
                     userId: req.user.id
                 }
             });
-            return announcement;
+            return {
+                ...announcement,
+                user_id: announcement.userId,
+                created_at: announcement.createdAt,
+                pinned_until: announcement.pinned_until
+            };
         } catch (e) {
             console.error(e);
             return reply.code(500).send({ error: 'Failed to create announcement' });
