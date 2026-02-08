@@ -48,7 +48,7 @@ const prisma = new PrismaClient({
 fastify.decorate('prisma', prisma);
 
 fastify.get('/version', async () => {
-  return { version: '1.1.1-inspect-triggers', timestamp: new Date().toISOString() };
+  return { version: '1.1.2-drop-trigger', timestamp: new Date().toISOString() };
 });
 
 fastify.register(require('./routes/debug'));

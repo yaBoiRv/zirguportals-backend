@@ -47,19 +47,36 @@ module.exports = async function debugRoutes(fastify) {
                 logs.push(`Failed to inspect columns: ${e.message}`);
             }
 
-            // 3. Retry Minimal Insert just in case (with explicit public schema)
+            // 3a. Save function definition before dropping (for backup)
+            try {
+                const funcDef = await prisma.$queryRaw`SELECT pg_get_functiondef('notify_new_announcement'::regproc) as def`;
+                logs.push({ saved_function_def: funcDef });
+            } catch (e) {
+                logs.push('Could not save function def: ' + e.message);
+            }
+
+            // 3b. Drop the offending trigger
+            try {
+                logs.push('Dropping broken trigger "trigger_notify_new_announcement"...');
+                await prisma.$executeRaw`DROP TRIGGER IF EXISTS trigger_notify_new_announcement ON public.announcements`;
+                logs.push('Trigger dropped successfully.');
+            } catch (e) {
+                logs.push('Failed to drop trigger: ' + e.message);
+            }
+
+            // 4. Retry Minimal Insert
             const user = await prisma.profile.findFirst();
             if (user) {
                 const id = crypto.randomUUID();
                 try {
                     await prisma.$executeRaw`
               INSERT INTO public.announcements (id, title, content, user_id) 
-              VALUES (${id}::uuid, 'Debug Title', 'Debug Content', ${user.userId}::uuid)
+              VALUES (${id}::uuid, 'Debug Title After Drop', 'Debug Content', ${user.userId}::uuid)
             `;
-                    logs.push('Minimal Insert Success!');
+                    logs.push('Minimal Insert Success AFTER DROP!');
                     await prisma.$executeRaw`DELETE FROM public.announcements WHERE id = ${id}::uuid`;
                 } catch (e) {
-                    logs.push('Minimal Insert Failed again: ' + e.message);
+                    logs.push('Minimal Insert Failed after drop: ' + e.message);
                 }
             }
 
