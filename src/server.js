@@ -144,15 +144,21 @@ fastify.get("/api/profile/me", { preHandler: requireAuth }, async (req, reply) =
     },
     include: {
       user: {
-        select: { role: true }
+        select: {
+          user_roles: true
+        }
       }
     }
   });
 
-  // Flatten role
+  // Flatten role (take first role or default 'user')
+  const roles = profile.user?.user_roles?.map(r => r.role) || [];
+  const primaryRole = roles.length > 0 ? roles[0] : 'user';
+
   const profileWithRole = {
     ...profile,
-    role: profile.user?.role || 'user',
+    role: primaryRole,
+    roles: roles, // also return full list
     user: undefined // remove nested user object
   };
 
