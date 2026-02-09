@@ -1046,15 +1046,15 @@ const start = async () => {
             data: {
               conversationId,
               senderId: socket.user.id,
-              body: String(body).slice(0, 5000),
+              content: String(body).slice(0, 5000), // Map body -> content
             },
-            include: { sender: { select: { id: true, email: true } } },
+            include: { sender: { select: { id: true, userId: true, name: true, username: true, avatarUrl: true } } },
           });
 
           io.to(`conv:${conversationId}`).emit("chat:new_message", {
             id: msg.id,
             conversationId: msg.conversationId,
-            body: msg.body,
+            content: msg.content,
             createdAt: msg.createdAt,
             sender: msg.sender,
           });
