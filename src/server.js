@@ -563,7 +563,7 @@ fastify.post("/chat/conversations", { preHandler: requireAuth }, async (req, rep
       sourceId: sourceId ?? null,
     },
   });
-  if (existing) return reply.send({ conversationId: existing.id });
+  if (existing) return reply.send({ conversationId: existing.id, isNew: false });
 
   const conv = await prisma.conversation.create({
     data: {
@@ -579,7 +579,7 @@ fastify.post("/chat/conversations", { preHandler: requireAuth }, async (req, rep
     select: { id: true },
   });
 
-  return reply.send({ conversationId: conv.id });
+  return reply.send({ conversationId: conv.id, isNew: true });
 });
 
 fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, reply) => {
