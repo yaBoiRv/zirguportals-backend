@@ -1159,49 +1159,33 @@ const start = async () => {
 
     fastify.get("/favorites/check", { preHandler: requireAuth }, async (req, reply) => {
       const { type, id, listingType } = req.query;
-      let whereClause = { userId: req.user.id };
 
-      if (type === 'trainer') {
-        whereClause.trainerId = id;
-      } else if (type === 'service') {
-        whereClause.serviceId = id;
-      } else if (type === 'listing') {
-        if (listingType === 'horse') {
-          whereClause.horseId = id;
-        } else if (listingType === 'equipment') {
-          whereClause.equipmentId = id;
-        }
+      // Only support listings for now (matching existing table structure)
+      if (type !== 'listing') {
+        return { isFavorited: false };
       }
 
-      const count = await prisma.favorite.count({ where: whereClause });
+      const count = await prisma.favorite.count({
+        where: {
+          userId: req.user.id,
+          listingId: id
+        }
+      });
       return { isFavorited: count > 0 };
     });
 
     fastify.post("/favorites/toggle", { preHandler: requireAuth }, async (req, reply) => {
       const { type, id, listingType } = req.body;
 
-      let whereClause = { userId: req.user.id };
-      let dataClause = { userId: req.user.id };
-
-      if (type === 'trainer') {
-        whereClause = { ...whereClause, trainerId: id };
-        dataClause = { ...dataClause, trainerId: id };
-      } else if (type === 'service') {
-        whereClause = { ...whereClause, serviceId: id };
-        dataClause = { ...dataClause, serviceId: id };
-      } else if (type === 'listing') {
-        if (listingType === 'horse') {
-          whereClause = { ...whereClause, horseId: id };
-          dataClause = { ...dataClause, horseId: id };
-        } else if (listingType === 'equipment') {
-          whereClause = { ...whereClause, equipmentId: id };
-          dataClause = { ...dataClause, equipmentId: id };
-        } else {
-          return reply.code(400).send({ error: "Invalid listingType" });
-        }
-      } else {
-        return reply.code(400).send({ error: "Invalid type" });
+      // Only support listings for now (matching existing table structure)
+      if (type !== 'listing') {
+        return reply.code(400).send({ error: "Only listing favorites are supported" });
       }
+
+      const whereClause = {
+        userId: req.user.id,
+        listingId: id
+      };
 
       const existing = await prisma.favorite.findFirst({ where: whereClause });
 
@@ -1209,16 +1193,12 @@ const start = async () => {
         await prisma.favorite.delete({ where: { id: existing.id } });
         return { favorited: false };
       } else {
-        await prisma.favorite.create({ data: dataClause });
-
-        // Notify owner if Favoriting a Listing
-        if (type === 'listing' && id) { // assuming ID is listing ID
-          // Need to fetch listing to find owner.
-          // This is expensive inside a toggle. Ideally async job.
-          // For now, let's skip to keep it simple or do checking.
-          // If user wants notification, we need Owner ID.
-          // dataClause has listing ID only.
-        }
+        await prisma.favorite.create({
+          data: {
+            userId: req.user.id,
+            listingId: id
+          }
+        });
         return { favorited: true };
       }
     });
