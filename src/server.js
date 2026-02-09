@@ -1147,8 +1147,8 @@ const start = async () => {
     // --- FAVORITES ---
     fastify.get("/favorites", { preHandler: requireAuth }, async (req, reply) => {
       try {
-        const favs = await prisma.favorite.findMany({
-          where: { userId: req.user.id }
+        const favs = await prisma.listing_favorites.findMany({
+          where: { user_id: req.user.id }
         });
         return favs;
       } catch (e) {
@@ -1165,10 +1165,10 @@ const start = async () => {
         return { isFavorited: false };
       }
 
-      const count = await prisma.favorite.count({
+      const count = await prisma.listing_favorites.count({
         where: {
-          userId: req.user.id,
-          listingId: id
+          user_id: req.user.id,
+          listing_id: id
         }
       });
       return { isFavorited: count > 0 };
@@ -1183,20 +1183,21 @@ const start = async () => {
       }
 
       const whereClause = {
-        userId: req.user.id,
-        listingId: id
+        user_id: req.user.id,
+        listing_id: id
       };
 
-      const existing = await prisma.favorite.findFirst({ where: whereClause });
+      const existing = await prisma.listing_favorites.findFirst({ where: whereClause });
 
       if (existing) {
-        await prisma.favorite.delete({ where: { id: existing.id } });
+        await prisma.listing_favorites.delete({ where: { id: existing.id } });
         return { favorited: false };
       } else {
-        await prisma.favorite.create({
+        await prisma.listing_favorites.create({
           data: {
-            userId: req.user.id,
-            listingId: id
+            user_id: req.user.id,
+            listing_id: id,
+            listing_type: listingType || 'horse'
           }
         });
         return { favorited: true };
@@ -1206,13 +1207,13 @@ const start = async () => {
     // --- NOTIFICATIONS ---
     fastify.get("/notifications", { preHandler: requireAuth }, async (req, reply) => {
       try {
-        const notifs = await prisma.notification.findMany({
-          where: { userId: req.user.id },
-          orderBy: { createdAt: 'desc' }, // Order by newest first
+        const notifs = await prisma.notifications.findMany({
+          where: { user_id: req.user.id },
+          orderBy: { created_at: 'desc' },
           take: 50
         });
-        const unread = await prisma.notification.count({
-          where: { userId: req.user.id, isRead: false }
+        const unread = await prisma.notifications.count({
+          where: { user_id: req.user.id, read_at: null }
         });
         return { notifications: notifs, unread_count: unread };
       } catch (e) {
@@ -1223,25 +1224,25 @@ const start = async () => {
 
     fastify.post("/notifications/:id/read", { preHandler: requireAuth }, async (req, reply) => {
       const { id } = req.params;
-      const result = await prisma.notification.updateMany({
-        where: { id, userId: req.user.id },
-        data: { isRead: true }
+      await prisma.notifications.updateMany({
+        where: { id, user_id: req.user.id },
+        data: { read_at: new Date() }
       });
       return { success: true };
     });
 
     fastify.delete("/notifications/:id", { preHandler: requireAuth }, async (req, reply) => {
       const { id } = req.params;
-      await prisma.notification.deleteMany({
-        where: { id, userId: req.user.id }
+      await prisma.notifications.deleteMany({
+        where: { id, user_id: req.user.id }
       });
       return { success: true };
     });
 
     fastify.post("/notifications/read-all", { preHandler: requireAuth }, async (req, reply) => {
-      await prisma.notification.updateMany({
-        where: { userId: req.user.id, isRead: false },
-        data: { isRead: true }
+      await prisma.notifications.updateMany({
+        where: { user_id: req.user.id, read_at: null },
+        data: { read_at: new Date() }
       });
       return { success: true };
     });
