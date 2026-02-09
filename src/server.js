@@ -600,41 +600,57 @@ fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, repl
 
   // flatten last message & populate source info
   const out = await Promise.all(conversations.map(async (c) => {
+    // Find the OTHER participant (not me)
+    // We cannot rely on order, so we filter by ID. A participant is 'other' if userId != me.
     const other = c.participants.map(p => p.user).find(u => u.userId !== req.user.id) || null;
 
     let source_info = null;
+    let is_listing_owner = false;
+
     if (c.sourceType && c.sourceId) {
       try {
         if (c.sourceType === 'horse_listing') {
           const item = await prisma.horse_listings.findUnique({
             where: { id: c.sourceId },
-            select: { title: true, price: true, currency: true, images: true }
+            select: { title: true, price: true, currency: true, images: true, user_id: true }
           });
-          if (item) source_info = { title: item.title, price: Number(item.price), currency: item.currency, images: item.images };
+          if (item) {
+            source_info = { title: item.title, price: Number(item.price), currency: item.currency, images: item.images };
+            if (item.user_id === req.user.id) is_listing_owner = true;
+          }
         } else if (c.sourceType === 'equipment_listing') {
           const item = await prisma.equipment_listings.findUnique({
             where: { id: c.sourceId },
-            select: { title: true, price: true, currency: true, images: true }
+            select: { title: true, price: true, currency: true, images: true, user_id: true }
           });
-          if (item) source_info = { title: item.title, price: Number(item.price), currency: item.currency, images: item.images };
+          if (item) {
+            source_info = { title: item.title, price: Number(item.price), currency: item.currency, images: item.images };
+            if (item.user_id === req.user.id) is_listing_owner = true;
+          }
         } else if (c.sourceType === 'service') {
           const item = await prisma.services.findUnique({
             where: { id: c.sourceId },
-            select: { full_name: true, hourly_rate: true, pricing_type: true, profile_photo_url: true, specialty: true }
+            select: { full_name: true, hourly_rate: true, pricing_type: true, profile_photo_url: true, specialty: true, user_id: true }
           });
-          if (item) source_info = {
-            title: item.full_name,
-            price: Number(item.hourly_rate || 0),
-            pricing_type: item.pricing_type,
-            avatar_url: item.profile_photo_url,
-            specialty_key: item.specialty
-          };
+          if (item) {
+            source_info = {
+              title: item.full_name,
+              price: Number(item.hourly_rate || 0),
+              pricing_type: item.pricing_type,
+              avatar_url: item.profile_photo_url,
+              specialty_key: item.specialty
+            };
+            if (item.user_id === req.user.id) is_listing_owner = true;
+          }
         } else if (c.sourceType === 'trainer') {
           const item = await prisma.trainers.findUnique({
             where: { id: c.sourceId },
             include: { profiles: { select: { name: true, avatarUrl: true } } }
           });
-          if (item && item.profiles) source_info = { name: item.profiles.name, avatar_url: item.profiles.avatarUrl };
+          if (item) {
+            if (item.profiles) source_info = { name: item.profiles.name, avatar_url: item.profiles.avatarUrl };
+            if (item.user_id === req.user.id) is_listing_owner = true;
+          }
         }
       } catch (e) {
         console.error("Error fetching source info", e);
@@ -654,6 +670,7 @@ fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, repl
       source_type: c.sourceType,
       source_id: c.sourceId,
       source_info,
+      is_listing_owner, // Return explicit ownership flag
       unread_count: c.messages.filter(m => !m.isRead && m.senderId !== req.user.id).length
     };
   }));
