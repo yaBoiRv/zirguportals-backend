@@ -1529,7 +1529,9 @@ enum app_role {
 model Conversation {
   id        String   @id @default(uuid()) @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  sourceType String?   @map("source_type")
+  sourceId   String?   @map("source_id") @db.Uuid
   
   participants ConversationParticipant[]
   messages     Message[]

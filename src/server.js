@@ -48,7 +48,7 @@ const prisma = new PrismaClient({
 fastify.decorate('prisma', prisma);
 
 fastify.get('/version', async () => {
-  return { version: '1.3.1-fix-profile-relations', timestamp: new Date().toISOString() };
+  return { version: '1.3.2-fix-chat-server', timestamp: new Date().toISOString() };
 });
 
 
@@ -589,11 +589,11 @@ fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, repl
     },
     orderBy: { updatedAt: "desc" },
     include: {
-      participants: { include: { user: { select: { id: true, email: true } } } },
+      participants: { include: { user: { select: { id: true, userId: true, name: true, username: true, avatarUrl: true } } } },
       messages: {
         orderBy: { createdAt: "desc" },
         take: 1,
-        include: { sender: { select: { id: true, email: true } } },
+        include: { sender: { select: { id: true, userId: true, name: true, username: true, avatarUrl: true } } },
       },
     },
   });
@@ -631,7 +631,7 @@ fastify.get(
       ...(cursor
         ? { skip: 1, cursor: { id: String(cursor) } } // prisma cursor pagination
         : {}),
-      include: { sender: { select: { id: true, email: true } } },
+      include: { sender: { select: { id: true, userId: true, name: true, username: true, avatarUrl: true } } },
     });
 
     return reply.send({
