@@ -1147,60 +1147,105 @@ const start = async () => {
     // --- FAVORITES ---
     fastify.get("/favorites", { preHandler: requireAuth }, async (req, reply) => {
       try {
-        const favs = await prisma.listing_favorites.findMany({
+        const listingFavs = await prisma.listing_favorites.findMany({
           where: { user_id: req.user.id }
         });
-        return favs;
+        const serviceFavs = await prisma.service_favorites.findMany({
+          where: { user_id: req.user.id }
+        });
+        return { listings: listingFavs, services: serviceFavs };
       } catch (e) {
         fastify.log.error(e);
-        return [];
+        return { listings: [], services: [] };
       }
     });
 
     fastify.get("/favorites/check", { preHandler: requireAuth }, async (req, reply) => {
       const { type, id, listingType } = req.query;
 
-      // Only support listings for now (matching existing table structure)
-      if (type !== 'listing') {
+      try {
+        if (type === 'listing') {
+          const count = await prisma.listing_favorites.count({
+            where: {
+              user_id: req.user.id,
+              listing_id: id
+            }
+          });
+          return { isFavorited: count > 0 };
+        } else if (type === 'service') {
+          const count = await prisma.service_favorites.count({
+            where: {
+              user_id: req.user.id,
+              service_id: id
+            }
+          });
+          return { isFavorited: count > 0 };
+        } else if (type === 'trainer') {
+          // Trainers don't have a favorites table yet
+          return { isFavorited: false };
+        }
+
+        return { isFavorited: false };
+      } catch (e) {
+        fastify.log.error(e);
         return { isFavorited: false };
       }
-
-      const count = await prisma.listing_favorites.count({
-        where: {
-          user_id: req.user.id,
-          listing_id: id
-        }
-      });
-      return { isFavorited: count > 0 };
     });
 
     fastify.post("/favorites/toggle", { preHandler: requireAuth }, async (req, reply) => {
       const { type, id, listingType } = req.body;
 
-      // Only support listings for now (matching existing table structure)
-      if (type !== 'listing') {
-        return reply.code(400).send({ error: "Only listing favorites are supported" });
-      }
-
-      const whereClause = {
-        user_id: req.user.id,
-        listing_id: id
-      };
-
-      const existing = await prisma.listing_favorites.findFirst({ where: whereClause });
-
-      if (existing) {
-        await prisma.listing_favorites.delete({ where: { id: existing.id } });
-        return { favorited: false };
-      } else {
-        await prisma.listing_favorites.create({
-          data: {
+      try {
+        if (type === 'listing') {
+          const whereClause = {
             user_id: req.user.id,
-            listing_id: id,
-            listing_type: listingType || 'horse'
+            listing_id: id
+          };
+
+          const existing = await prisma.listing_favorites.findFirst({ where: whereClause });
+
+          if (existing) {
+            await prisma.listing_favorites.delete({ where: { id: existing.id } });
+            return { favorited: false };
+          } else {
+            await prisma.listing_favorites.create({
+              data: {
+                user_id: req.user.id,
+                listing_id: id,
+                listing_type: listingType || 'horse'
+              }
+            });
+            return { favorited: true };
           }
-        });
-        return { favorited: true };
+        } else if (type === 'service') {
+          const whereClause = {
+            user_id: req.user.id,
+            service_id: id
+          };
+
+          const existing = await prisma.service_favorites.findFirst({ where: whereClause });
+
+          if (existing) {
+            await prisma.service_favorites.delete({ where: { id: existing.id } });
+            return { favorited: false };
+          } else {
+            await prisma.service_favorites.create({
+              data: {
+                user_id: req.user.id,
+                service_id: id
+              }
+            });
+            return { favorited: true };
+          }
+        } else if (type === 'trainer') {
+          // Trainers don't have a favorites table yet
+          return reply.code(501).send({ error: "Trainer favorites not yet implemented" });
+        }
+
+        return reply.code(400).send({ error: "Invalid type" });
+      } catch (e) {
+        fastify.log.error(e);
+        return reply.code(500).send({ error: "Failed to toggle favorite" });
       }
     });
 
