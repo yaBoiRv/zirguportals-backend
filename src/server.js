@@ -48,7 +48,7 @@ const prisma = new PrismaClient({
 fastify.decorate('prisma', prisma);
 
 fastify.get('/version', async () => {
-  return { version: '1.3.2-fix-chat-server', timestamp: new Date().toISOString() };
+  return { version: '1.3.3-chat-fixes', timestamp: new Date().toISOString() };
 });
 
 
@@ -599,13 +599,23 @@ fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, repl
   });
 
   // flatten last message
-  const out = conversations.map((c) => ({
-    id: c.id,
-    createdAt: c.createdAt,
-    updatedAt: c.updatedAt,
-    participants: c.participants.map((p) => p.user),
-    lastMessage: c.messages[0] || null,
-  }));
+  const out = conversations.map((c) => {
+    const other = c.participants.map(p => p.user).find(u => u.userId !== req.user.id) || null;
+    return {
+      id: c.id,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      // participants: c.participants.map((p) => p.user), // Frontend doesn't seem to use this raw array? keeping it just in case
+      participant_1_id: c.participants[0]?.user.userId, // Map for frontend convenience
+      participant_2_id: c.participants[1]?.user.userId,
+
+      lastMessage: c.messages[0] || null,
+      other_participant: other ? { username: other.name || other.username || "Unknown", avatar_url: other.avatarUrl } : null,
+      source_type: c.sourceType,
+      source_id: c.sourceId,
+      unread_count: c.messages.filter(m => !m.isRead && m.senderId !== req.user.id).length // Approximate unread
+    };
+  });
 
   return reply.send({ conversations: out });
 });
@@ -640,6 +650,30 @@ fastify.get(
     });
   }
 );
+
+fastify.post("/chat/conversations/:id/read", { preHandler: requireAuth }, async (req, reply) => {
+  const { id } = req.params;
+  try {
+    // Mark messages as read
+    await prisma.message.updateMany({
+      where: {
+        conversationId: id,
+        senderId: { not: req.user.id }
+      },
+      data: { isRead: true }
+    });
+
+    // Update participant last read
+    await prisma.conversationParticipant.update({
+      where: { conversationId_userId: { conversationId: id, userId: req.user.id } },
+      data: { lastReadAt: new Date() }
+    });
+  } catch (e) {
+    console.error("Error marking read:", e);
+    // Ignore error if participant not found etc
+  }
+  return { success: true };
+});
 
 fastify.get("/files/:bucket/*", async (req, reply) => {
   const bucket = req.params.bucket;
