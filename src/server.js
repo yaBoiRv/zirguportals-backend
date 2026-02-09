@@ -1157,6 +1157,26 @@ const start = async () => {
       }
     });
 
+    fastify.get("/favorites/check", { preHandler: requireAuth }, async (req, reply) => {
+      const { type, id, listingType } = req.query;
+      let whereClause = { userId: req.user.id };
+
+      if (type === 'trainer') {
+        whereClause.trainerId = id;
+      } else if (type === 'service') {
+        whereClause.serviceId = id;
+      } else if (type === 'listing') {
+        if (listingType === 'horse') {
+          whereClause.horseId = id;
+        } else if (listingType === 'equipment') {
+          whereClause.equipmentId = id;
+        }
+      }
+
+      const count = await prisma.favorite.count({ where: whereClause });
+      return { isFavorited: count > 0 };
+    });
+
     fastify.post("/favorites/toggle", { preHandler: requireAuth }, async (req, reply) => {
       const { type, id, listingType } = req.body;
 
