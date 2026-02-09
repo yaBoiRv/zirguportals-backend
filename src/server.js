@@ -48,7 +48,7 @@ const prisma = new PrismaClient({
 fastify.decorate('prisma', prisma);
 
 fastify.get('/version', async () => {
-  return { version: '1.3.0-add-chat-schema', timestamp: new Date().toISOString() };
+  return { version: '1.3.1-fix-profile-relations', timestamp: new Date().toISOString() };
 });
 
 
