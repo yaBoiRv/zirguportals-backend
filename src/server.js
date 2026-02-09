@@ -1143,6 +1143,92 @@ const start = async () => {
 
 
 
+
+    // --- FAVORITES ---
+    fastify.get("/favorites", { preHandler: requireAuth }, async (req, reply) => {
+      try {
+        const favs = await prisma.favorite.findMany({
+          where: { userId: req.user.id }
+        });
+        return favs;
+      } catch (e) {
+        fastify.log.error(e);
+        return [];
+      }
+    });
+
+    fastify.post("/favorites/toggle", { preHandler: requireAuth }, async (req, reply) => {
+      const { type, id, listingType } = req.body;
+
+      let whereClause = { userId: req.user.id };
+      let dataClause = { userId: req.user.id };
+
+      if (type === 'trainer') {
+        whereClause = { ...whereClause, trainerId: id };
+        dataClause = { ...dataClause, trainerId: id };
+      } else if (type === 'service') {
+        whereClause = { ...whereClause, serviceId: id };
+        dataClause = { ...dataClause, serviceId: id };
+      } else if (type === 'listing') {
+        if (listingType === 'horse') {
+          whereClause = { ...whereClause, horseId: id };
+          dataClause = { ...dataClause, horseId: id };
+        } else if (listingType === 'equipment') {
+          whereClause = { ...whereClause, equipmentId: id };
+          dataClause = { ...dataClause, equipmentId: id };
+        } else {
+          return reply.code(400).send({ error: "Invalid listingType" });
+        }
+      } else {
+        return reply.code(400).send({ error: "Invalid type" });
+      }
+
+      const existing = await prisma.favorite.findFirst({ where: whereClause });
+
+      if (existing) {
+        await prisma.favorite.delete({ where: { id: existing.id } });
+        return { favorited: false };
+      } else {
+        await prisma.favorite.create({ data: dataClause });
+        return { favorited: true };
+      }
+    });
+
+    // --- NOTIFICATIONS ---
+    fastify.get("/notifications", { preHandler: requireAuth }, async (req, reply) => {
+      try {
+        const notifs = await prisma.notification.findMany({
+          where: { userId: req.user.id },
+          orderBy: { createdAt: 'desc' }, // Order by newest first
+          take: 50
+        });
+        const unread = await prisma.notification.count({
+          where: { userId: req.user.id, isRead: false }
+        });
+        return { notifications: notifs, unread_count: unread };
+      } catch (e) {
+        fastify.log.error(e);
+        return { notifications: [], unread_count: 0 };
+      }
+    });
+
+    fastify.post("/notifications/:id/read", { preHandler: requireAuth }, async (req, reply) => {
+      const { id } = req.params;
+      const result = await prisma.notification.updateMany({
+        where: { id, userId: req.user.id },
+        data: { isRead: true }
+      });
+      return { success: true };
+    });
+
+    fastify.post("/notifications/read-all", { preHandler: requireAuth }, async (req, reply) => {
+      await prisma.notification.updateMany({
+        where: { userId: req.user.id, isRead: false },
+        data: { isRead: true }
+      });
+      return { success: true };
+    });
+
     // --- FORCE FIX DATA INTEGRITY ON STARTUP ---
     try {
       fastify.log.info("Checking data integrity for forum_topics...");
