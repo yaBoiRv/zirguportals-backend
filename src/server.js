@@ -1153,10 +1153,13 @@ const start = async () => {
         const serviceFavs = await prisma.service_favorites.findMany({
           where: { user_id: req.user.id }
         });
-        return { listings: listingFavs, services: serviceFavs };
+        const trainerFavs = await prisma.trainer_favorites.findMany({
+          where: { user_id: req.user.id }
+        });
+        return { listings: listingFavs, services: serviceFavs, trainers: trainerFavs };
       } catch (e) {
         fastify.log.error(e);
-        return { listings: [], services: [] };
+        return { listings: [], services: [], trainers: [] };
       }
     });
 
@@ -1181,8 +1184,13 @@ const start = async () => {
           });
           return { isFavorited: count > 0 };
         } else if (type === 'trainer') {
-          // Trainers don't have a favorites table yet
-          return { isFavorited: false };
+          const count = await prisma.trainer_favorites.count({
+            where: {
+              user_id: req.user.id,
+              trainer_id: id
+            }
+          });
+          return { isFavorited: count > 0 };
         }
 
         return { isFavorited: false };
@@ -1238,8 +1246,25 @@ const start = async () => {
             return { favorited: true };
           }
         } else if (type === 'trainer') {
-          // Trainers don't have a favorites table yet
-          return reply.code(501).send({ error: "Trainer favorites not yet implemented" });
+          const whereClause = {
+            user_id: req.user.id,
+            trainer_id: id
+          };
+
+          const existing = await prisma.trainer_favorites.findFirst({ where: whereClause });
+
+          if (existing) {
+            await prisma.trainer_favorites.delete({ where: { id: existing.id } });
+            return { favorited: false };
+          } else {
+            await prisma.trainer_favorites.create({
+              data: {
+                user_id: req.user.id,
+                trainer_id: id
+              }
+            });
+            return { favorited: true };
+          }
         }
 
         return reply.code(400).send({ error: "Invalid type" });
