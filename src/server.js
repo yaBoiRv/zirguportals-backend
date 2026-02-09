@@ -666,7 +666,7 @@ fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, repl
       participant_2_id: c.participants[1]?.user.userId,
 
       lastMessage: c.messages[0] || null,
-      other_participant: other ? { username: other.name || other.username || "User", avatar_url: other.avatarUrl } : null,
+      other_participant: other ? { username: other.username || other.name || "User", avatar_url: other.avatarUrl } : null,
       source_type: c.sourceType,
       source_id: c.sourceId,
       source_info,
