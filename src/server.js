@@ -675,7 +675,21 @@ fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, repl
     };
   }));
 
-  return reply.send({ conversations: out });
+  // Filter out empty conversations for listing owners
+  // We only want to show empty chats to the initiator (buyer) so they can send the first message.
+  const filteredOut = out.filter(c => {
+    // If there are messages, always show
+    if (c.lastMessage) return true;
+
+    // If no messages (empty chat):
+    // Hide if I am the listing owner (I didn't start it, and nothing is said yet)
+    if (c.is_listing_owner) return false;
+
+    // Show if I am the buyer (I started it, wait for me to type)
+    return true;
+  });
+
+  return reply.send({ conversations: filteredOut });
 });
 
 fastify.get(
