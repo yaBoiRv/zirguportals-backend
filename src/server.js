@@ -598,24 +598,65 @@ fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, repl
     },
   });
 
-  // flatten last message
-  const out = conversations.map((c) => {
+  // flatten last message & populate source info
+  const out = await Promise.all(conversations.map(async (c) => {
     const other = c.participants.map(p => p.user).find(u => u.userId !== req.user.id) || null;
+
+    let source_info = null;
+    if (c.sourceType && c.sourceId) {
+      try {
+        if (c.sourceType === 'horse_listing') {
+          const item = await prisma.horse_listings.findUnique({
+            where: { id: c.sourceId },
+            select: { title: true, price: true, currency: true, images: true }
+          });
+          if (item) source_info = { title: item.title, price: Number(item.price), currency: item.currency, images: item.images };
+        } else if (c.sourceType === 'equipment_listing') {
+          const item = await prisma.equipment_listings.findUnique({
+            where: { id: c.sourceId },
+            select: { title: true, price: true, currency: true, images: true }
+          });
+          if (item) source_info = { title: item.title, price: Number(item.price), currency: item.currency, images: item.images };
+        } else if (c.sourceType === 'service') {
+          const item = await prisma.services.findUnique({
+            where: { id: c.sourceId },
+            select: { full_name: true, hourly_rate: true, pricing_type: true, profile_photo_url: true, specialty: true }
+          });
+          if (item) source_info = {
+            title: item.full_name,
+            price: Number(item.hourly_rate || 0),
+            pricing_type: item.pricing_type,
+            avatar_url: item.profile_photo_url,
+            specialty_key: item.specialty
+          };
+        } else if (c.sourceType === 'trainer') {
+          const item = await prisma.trainers.findUnique({
+            where: { id: c.sourceId },
+            include: { profiles: { select: { name: true, avatarUrl: true } } }
+          });
+          if (item && item.profiles) source_info = { name: item.profiles.name, avatar_url: item.profiles.avatarUrl };
+        }
+      } catch (e) {
+        console.error("Error fetching source info", e);
+      }
+    }
+
     return {
       id: c.id,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
-      // participants: c.participants.map((p) => p.user), // Frontend doesn't seem to use this raw array? keeping it just in case
-      participant_1_id: c.participants[0]?.user.userId, // Map for frontend convenience
+      // participants: c.participants.map((p) => p.user),
+      participant_1_id: c.participants[0]?.user.userId,
       participant_2_id: c.participants[1]?.user.userId,
 
       lastMessage: c.messages[0] || null,
-      other_participant: other ? { username: other.name || other.username || "Unknown", avatar_url: other.avatarUrl } : null,
+      other_participant: other ? { username: other.name || other.username || "User", avatar_url: other.avatarUrl } : null,
       source_type: c.sourceType,
       source_id: c.sourceId,
-      unread_count: c.messages.filter(m => !m.isRead && m.senderId !== req.user.id).length // Approximate unread
+      source_info,
+      unread_count: c.messages.filter(m => !m.isRead && m.senderId !== req.user.id).length
     };
-  });
+  }));
 
   return reply.send({ conversations: out });
 });
