@@ -609,6 +609,16 @@ fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, repl
         take: 1,
         include: { sender: { select: { id: true, userId: true, name: true, username: true, avatarUrl: true } } },
       },
+      _count: {
+        select: {
+          messages: {
+            where: {
+              isRead: false,
+              senderId: { not: req.user.id }
+            }
+          }
+        }
+      }
     },
   });
 
@@ -685,7 +695,7 @@ fastify.get("/chat/conversations", { preHandler: requireAuth }, async (req, repl
       source_id: c.sourceId,
       source_info,
       is_listing_owner, // Return explicit ownership flag
-      unread_count: c.messages.filter(m => !m.isRead && m.senderId !== req.user.id).length
+      unread_count: c._count.messages
     };
   }));
 
