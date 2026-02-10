@@ -140,6 +140,7 @@ module.exports = async function listingsRoutes(fastify) {
                     birth_year: listing.age ? (new Date().getFullYear() - listing.age) : null,
                     video_url: listing.video_urls?.[0] || null,
                     seller: {
+                        id: listing.user_id, // Add seller ID for chat functionality
                         name: listing.seller_name,
                         username: listing.seller_username,
                         avatar_url: listing.seller_avatar
@@ -194,6 +195,7 @@ module.exports = async function listingsRoutes(fastify) {
                 disciplines,
                 temperaments,
                 seller: {
+                    id: r.user_id, // Add seller ID for chat functionality
                     name: r.seller_name,
                     username: r.seller_username,
                     avatar_url: r.seller_avatar,
@@ -389,6 +391,7 @@ module.exports = async function listingsRoutes(fastify) {
                 category: 'equipment',
                 colors,
                 seller: {
+                    id: r.user_id, // Add seller ID for chat functionality
                     name: r.seller_name,
                     username: r.seller_username,
                     avatar_url: r.seller_avatar,
@@ -517,6 +520,7 @@ module.exports = async function listingsRoutes(fastify) {
                     ...r,
                     category: 'equipment',
                     seller: {
+                        id: r.user_id, // Add seller ID for chat functionality
                         name: r.seller_name,
                         username: r.seller_username,
                         avatar_url: r.seller_avatar
