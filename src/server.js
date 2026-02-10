@@ -540,6 +540,20 @@ fastify.post("/files/signed-upload", { preHandler: requireAuth }, async (req, re
 
 
 
+
+fastify.get("/chat/unread-count", { preHandler: requireAuth }, async (req, reply) => {
+  const count = await prisma.message.count({
+    where: {
+      conversation: {
+        participants: { some: { userId: req.user.id } }
+      },
+      senderId: { not: req.user.id },
+      isRead: false
+    }
+  });
+  return { count };
+});
+
 fastify.post("/chat/conversations", { preHandler: requireAuth }, async (req, reply) => {
   const { targetUserId, sourceType, sourceId } = req.body || {};
   if (!targetUserId) return reply.code(400).send({ error: "targetUserId required" });
@@ -1158,11 +1172,11 @@ const start = async () => {
         const [horses, equipment] = await Promise.all([
           horseIds.length > 0 ? prisma.horse_listings.findMany({
             where: { id: { in: horseIds }, visible: true },
-            include: { profiles: { select: { name: true, username: true, avatar_url: true } } }
+            include: { profiles: { select: { name: true, username: true, avatarUrl: true } } }
           }) : [],
           equipmentIds.length > 0 ? prisma.equipment_listings.findMany({
             where: { id: { in: equipmentIds }, visible: true },
-            include: { profiles: { select: { name: true, username: true, avatar_url: true } } }
+            include: { profiles: { select: { name: true, username: true, avatarUrl: true } } }
           }) : []
         ]);
 
@@ -1178,7 +1192,7 @@ const start = async () => {
         const serviceIds = serviceFavs.map(f => f.service_id);
         const services = serviceIds.length > 0 ? await prisma.services.findMany({
           where: { id: { in: serviceIds }, visible: true },
-          include: { profiles: { select: { name: true, username: true, avatar_url: true } } }
+          include: { profiles: { select: { name: true, username: true, avatarUrl: true } } }
         }) : [];
 
         // 3. Trainers
@@ -1188,7 +1202,7 @@ const start = async () => {
         const trainerIds = trainerFavs.map(f => f.trainer_id);
         const trainers = trainerIds.length > 0 ? await prisma.trainers.findMany({
           where: { id: { in: trainerIds }, visible: true },
-          include: { profiles: { select: { name: true, username: true, avatar_url: true } } }
+          include: { profiles: { select: { name: true, username: true, avatarUrl: true } } }
         }) : [];
 
         return {
