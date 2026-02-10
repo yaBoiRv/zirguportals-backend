@@ -1147,16 +1147,55 @@ const start = async () => {
     // --- FAVORITES ---
     fastify.get("/favorites", { preHandler: requireAuth }, async (req, reply) => {
       try {
+        // 1. Listings
         const listingFavs = await prisma.listing_favorites.findMany({
           where: { user_id: req.user.id }
         });
+
+        const horseIds = listingFavs.filter(l => l.listing_type === 'horse').map(l => l.listing_id);
+        const equipmentIds = listingFavs.filter(l => l.listing_type === 'equipment' || l.listing_type === 'tack').map(l => l.listing_id);
+
+        const [horses, equipment] = await Promise.all([
+          horseIds.length > 0 ? prisma.horse_listings.findMany({
+            where: { id: { in: horseIds }, visible: true },
+            include: { profiles: { select: { name: true, username: true, avatar_url: true } } }
+          }) : [],
+          equipmentIds.length > 0 ? prisma.equipment_listings.findMany({
+            where: { id: { in: equipmentIds }, visible: true },
+            include: { profiles: { select: { name: true, username: true, avatar_url: true } } }
+          }) : []
+        ]);
+
+        const listings = [
+          ...horses.map(h => ({ ...h, category: 'horses', seller: h.profiles })),
+          ...equipment.map(e => ({ ...e, category: 'equipment', seller: e.profiles }))
+        ];
+
+        // 2. Services
         const serviceFavs = await prisma.service_favorites.findMany({
           where: { user_id: req.user.id }
         });
+        const serviceIds = serviceFavs.map(f => f.service_id);
+        const services = serviceIds.length > 0 ? await prisma.services.findMany({
+          where: { id: { in: serviceIds }, visible: true },
+          include: { profiles: { select: { name: true, username: true, avatar_url: true } } }
+        }) : [];
+
+        // 3. Trainers
         const trainerFavs = await prisma.trainer_favorites.findMany({
           where: { user_id: req.user.id }
         });
-        return { listings: listingFavs, services: serviceFavs, trainers: trainerFavs };
+        const trainerIds = trainerFavs.map(f => f.trainer_id);
+        const trainers = trainerIds.length > 0 ? await prisma.trainers.findMany({
+          where: { id: { in: trainerIds }, visible: true },
+          include: { profiles: { select: { name: true, username: true, avatar_url: true } } }
+        }) : [];
+
+        return {
+          listings,
+          services: services.map(s => ({ ...s, seller: s.profiles })),
+          trainers: trainers.map(t => ({ ...t, seller: t.profiles }))
+        };
       } catch (e) {
         fastify.log.error(e);
         return { listings: [], services: [], trainers: [] };
