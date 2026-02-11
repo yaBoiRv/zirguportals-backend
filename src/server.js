@@ -445,6 +445,157 @@ fastify.get("/auth/google/callback", async (req, reply) => {
   return reply.redirect(`${web}/auth/callback?token=${encodeURIComponent(jwtToken)}`);
 });
 
+// Email/Password Authentication
+fastify.post("/api/auth/register", async (req, reply) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) {
+    return reply.code(400).send({ error: "email and password required" });
+  }
+
+  const normalizedEmail = String(email).toLowerCase().trim();
+
+  // Check if user already exists
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  if (existing) {
+    return reply.code(400).send({ error: "User already exists" });
+  }
+
+  // Hash password
+  const passwordHash = await argon2.hash(password);
+
+  // Create user
+  const user = await prisma.user.create({
+    data: {
+      email: normalizedEmail,
+      passwordHash,
+      emailVerified: false,
+    },
+  });
+
+  // Create profile
+  await prisma.profile.create({
+    data: {
+      userId: user.id,
+      name: normalizedEmail.split("@")[0],
+      username: null,
+      phone: null,
+      avatarUrl: null,
+      hasTrainerProfile: false,
+      defaultLanguage: "en",
+      notificationPreferences: {
+        favorites: true,
+        new_listings: true,
+        chat_messages: true,
+        first_login_done: false,
+      },
+    },
+  });
+
+  // Generate JWT
+  const token = fastify.jwt.sign({ sub: user.id, email: user.email });
+
+  return reply.send({
+    user: {
+      id: user.id,
+      email: user.email,
+      emailVerified: user.emailVerified,
+    },
+    token,
+  });
+});
+
+fastify.post("/api/auth/login", async (req, reply) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) {
+    return reply.code(400).send({ error: "email and password required" });
+  }
+
+  const normalizedEmail = String(email).toLowerCase().trim();
+
+  // Find user
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  if (!user) {
+    return reply.code(401).send({ error: "Invalid credentials" });
+  }
+
+  // Verify password
+  const valid = await argon2.verify(user.passwordHash, password);
+  if (!valid) {
+    return reply.code(401).send({ error: "Invalid credentials" });
+  }
+
+  // Ensure profile exists
+  await prisma.profile.upsert({
+    where: { userId: user.id },
+    update: {},
+    create: {
+      userId: user.id,
+      name: normalizedEmail.split("@")[0],
+      username: null,
+      phone: null,
+      avatarUrl: null,
+      hasTrainerProfile: false,
+      defaultLanguage: "en",
+      notificationPreferences: {
+        favorites: true,
+        new_listings: true,
+        chat_messages: true,
+        first_login_done: false,
+      },
+    },
+  });
+
+  // Generate JWT
+  const token = fastify.jwt.sign({ sub: user.id, email: user.email });
+
+  return reply.send({
+    user: {
+      id: user.id,
+      email: user.email,
+      emailVerified: user.emailVerified,
+    },
+    token,
+  });
+});
+
+fastify.post("/api/auth/update-password", { preHandler: requireAuth }, async (req, reply) => {
+  const { password } = req.body || {};
+  if (!password) {
+    return reply.code(400).send({ error: "password required" });
+  }
+
+  const passwordHash = await argon2.hash(password);
+
+  await prisma.user.update({
+    where: { id: req.user.id },
+    data: { passwordHash },
+  });
+
+  return reply.send({ success: true });
+});
+
+fastify.post("/api/auth/update-email", { preHandler: requireAuth }, async (req, reply) => {
+  const { email } = req.body || {};
+  if (!email) {
+    return reply.code(400).send({ error: "email required" });
+  }
+
+  const normalizedEmail = String(email).toLowerCase().trim();
+
+  // Check if email is already taken
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  if (existing && existing.id !== req.user.id) {
+    return reply.code(400).send({ error: "Email already in use" });
+  }
+
+  await prisma.user.update({
+    where: { id: req.user.id },
+    data: { email: normalizedEmail, emailVerified: false },
+  });
+
+  return reply.send({ success: true, email: normalizedEmail });
+});
+
 
 // --- routes ---
 
