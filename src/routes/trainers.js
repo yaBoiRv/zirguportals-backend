@@ -53,6 +53,19 @@ module.exports = async function trainersRoutes(fastify) {
         }
     });
 
+    // GET /trainers/user/:userId - MUST come before /:id to avoid route conflict
+    fastify.get('/user/:userId', async (req, reply) => {
+        const { userId } = req.params;
+        try {
+            const rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.trainers WHERE user_id = $1::uuid`, userId);
+            if (!rows.length) return reply.code(404).send({ error: 'Trainer profile not found' });
+            return rows[0];
+        } catch (e) {
+            console.error(e);
+            return reply.code(500).send({ error: 'Database error' });
+        }
+    });
+
     // GET /trainers/:id
     // If id is a UUID, fetch by ID.
     fastify.get('/:id', async (req, reply) => {
@@ -86,18 +99,6 @@ module.exports = async function trainersRoutes(fastify) {
         }
     });
 
-    // GET /trainers/user/:userId
-    fastify.get('/user/:userId', async (req, reply) => {
-        const { userId } = req.params;
-        try {
-            const rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.trainers WHERE user_id = $1::uuid`, userId);
-            if (!rows.length) return reply.code(404).send({ error: 'Trainer profile not found' });
-            return rows[0];
-        } catch (e) {
-            console.error(e);
-            return reply.code(500).send({ error: 'Database error' });
-        }
-    });
 
     // POST /trainers
     fastify.post('/', { preHandler: requireAuth }, async (req, reply) => {
