@@ -1127,9 +1127,6 @@ const start = async () => {
       },
     });
 
-    // Make io accessible to routes
-    fastify.decorate('io', io);
-
     io.use((socket, next) => {
       try {
         const token =
@@ -1148,10 +1145,6 @@ const start = async () => {
 
     io.on("connection", (socket) => {
       fastify.log.info({ socketId: socket.id, user: socket.user }, "ws connected");
-
-      // Join user to their personal notification room
-      socket.join(`user:${socket.user.id}`);
-      fastify.log.info({ userId: socket.user.id }, "User joined notification room");
 
       socket.on("ping", () => socket.emit("pong"));
 
@@ -1337,31 +1330,6 @@ const start = async () => {
             });
             const table = normalizedType === 'equipment' ? 'equipment_listings' : 'horse_listings';
             await prisma.$executeRawUnsafe(`UPDATE public.${table} SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
-
-            // Get listing owner to send notification
-            const listing = await prisma.$queryRawUnsafe(`SELECT user_id, title FROM public.${table} WHERE id = $1::uuid`, id);
-            if (listing && listing[0] && listing[0].user_id !== req.user.id) {
-              const ownerId = listing[0].user_id;
-              const listingTitle = listing[0].title;
-
-              // Create notification
-              const notification = await prisma.notifications.create({
-                data: {
-                  user_id: ownerId,
-                  type: 'listing_favorited',
-                  title: 'listing_favorited',
-                  content: listingTitle,
-                  source_type: normalizedType === 'equipment' ? 'equipment_listing' : 'horse_listing',
-                  source_id: id,
-                  source_user_id: req.user.id,
-                  metadata: {}
-                }
-              });
-
-              // Emit real-time notification via Socket.IO
-              fastify.io.to(`user:${ownerId}`).emit('notification:new', notification);
-            }
-
             return { favorited: true };
           }
         } else if (type === 'service') {
@@ -1384,29 +1352,6 @@ const start = async () => {
               }
             });
             await prisma.$executeRawUnsafe(`UPDATE public.services SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
-
-            // Get service owner to send notification
-            const service = await prisma.$queryRawUnsafe(`SELECT user_id, full_name FROM public.services WHERE id = $1::uuid`, id);
-            if (service && service[0] && service[0].user_id !== req.user.id) {
-              const ownerId = service[0].user_id;
-              const serviceName = service[0].full_name;
-
-              const notification = await prisma.notifications.create({
-                data: {
-                  user_id: ownerId,
-                  type: 'service_favorited',
-                  title: 'service_favorited',
-                  content: serviceName,
-                  source_type: 'service',
-                  source_id: id,
-                  source_user_id: req.user.id,
-                  metadata: {}
-                }
-              });
-
-              fastify.io.to(`user:${ownerId}`).emit('notification:new', notification);
-            }
-
             return { favorited: true };
           }
         } else if (type === 'trainer') {
@@ -1429,29 +1374,6 @@ const start = async () => {
               }
             });
             await prisma.$executeRawUnsafe(`UPDATE public.trainers SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
-
-            // Get trainer owner to send notification
-            const trainer = await prisma.$queryRawUnsafe(`SELECT user_id, name FROM public.trainers WHERE id = $1::uuid`, id);
-            if (trainer && trainer[0] && trainer[0].user_id !== req.user.id) {
-              const ownerId = trainer[0].user_id;
-              const trainerName = trainer[0].name;
-
-              const notification = await prisma.notifications.create({
-                data: {
-                  user_id: ownerId,
-                  type: 'trainer_favorited',
-                  title: 'trainer_favorited',
-                  content: trainerName,
-                  source_type: 'trainer',
-                  source_id: id,
-                  source_user_id: req.user.id,
-                  metadata: {}
-                }
-              });
-
-              fastify.io.to(`user:${ownerId}`).emit('notification:new', notification);
-            }
-
             return { favorited: true };
           }
         }
