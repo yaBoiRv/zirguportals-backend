@@ -166,6 +166,10 @@ module.exports = async function listingsRoutes(fastify) {
                 id
             );
             if (!rows.length) return reply.code(404).send({ error: 'Listing not found' });
+
+            // Increment views count asynchronously
+            prisma.$queryRawUnsafe(`UPDATE public.horse_listings SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1::uuid`, id).catch(e => console.error('Error incrementing views:', e));
+
             const r = rows[0];
 
             const colors = await prisma.$queryRawUnsafe(
@@ -379,6 +383,10 @@ module.exports = async function listingsRoutes(fastify) {
                 id
             );
             if (!rows.length) return reply.code(404).send({ error: 'Listing not found' });
+
+            // Increment views count asynchronously
+            prisma.$queryRawUnsafe(`UPDATE public.equipment_listings SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1::uuid`, id).catch(e => console.error('Error incrementing views:', e));
+
             const r = rows[0];
 
             const colors = await prisma.$queryRawUnsafe(

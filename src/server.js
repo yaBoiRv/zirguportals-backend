@@ -1316,6 +1316,8 @@ const start = async () => {
 
           if (existing) {
             await prisma.listing_favorites.delete({ where: { id: existing.id } });
+            const table = existing.listing_type === 'equipment' ? 'equipment_listings' : 'horse_listings';
+            await prisma.$executeRawUnsafe(`UPDATE public.${table} SET favorites_count = GREATEST(COALESCE(favorites_count, 0) - 1, 0) WHERE id = $1::uuid`, existing.listing_id);
             return { favorited: false };
           } else {
             await prisma.listing_favorites.create({
@@ -1325,6 +1327,8 @@ const start = async () => {
                 listing_type: listingType || 'horse'
               }
             });
+            const table = (listingType || 'horse') === 'equipment' ? 'equipment_listings' : 'horse_listings';
+            await prisma.$executeRawUnsafe(`UPDATE public.${table} SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
             return { favorited: true };
           }
         } else if (type === 'service') {
@@ -1337,6 +1341,7 @@ const start = async () => {
 
           if (existing) {
             await prisma.service_favorites.delete({ where: { id: existing.id } });
+            await prisma.$executeRawUnsafe(`UPDATE public.services SET favorites_count = GREATEST(COALESCE(favorites_count, 0) - 1, 0) WHERE id = $1::uuid`, existing.service_id);
             return { favorited: false };
           } else {
             await prisma.service_favorites.create({
@@ -1345,6 +1350,7 @@ const start = async () => {
                 service_id: id
               }
             });
+            await prisma.$executeRawUnsafe(`UPDATE public.services SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
             return { favorited: true };
           }
         } else if (type === 'trainer') {
@@ -1357,6 +1363,7 @@ const start = async () => {
 
           if (existing) {
             await prisma.trainer_favorites.delete({ where: { id: existing.id } });
+            await prisma.$executeRawUnsafe(`UPDATE public.trainers SET favorites_count = GREATEST(COALESCE(favorites_count, 0) - 1, 0) WHERE id = $1::uuid`, existing.trainer_id);
             return { favorited: false };
           } else {
             await prisma.trainer_favorites.create({
@@ -1365,6 +1372,7 @@ const start = async () => {
                 trainer_id: id
               }
             });
+            await prisma.$executeRawUnsafe(`UPDATE public.trainers SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
             return { favorited: true };
           }
         }

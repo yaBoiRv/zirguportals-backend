@@ -57,6 +57,10 @@ module.exports = async function servicesRoutes(fastify) {
             `, id);
             if (!rows.length) return reply.code(404).send({ error: 'Service not found' });
 
+            // Increment views count asynchronously
+            prisma.$queryRawUnsafe(`UPDATE public.services SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1::uuid`, id).catch(e => console.error('Error incrementing views:', e));
+
+
             const r = rows[0];
             return {
                 ...r,
