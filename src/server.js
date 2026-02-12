@@ -1215,7 +1215,7 @@ const start = async () => {
           where: { user_id: req.user.id }
         });
 
-        const horseIds = listingFavs.filter(l => l.listing_type === 'horse').map(l => l.listing_id);
+        const horseIds = listingFavs.filter(l => l.listing_type === 'horse' || l.listing_type === 'horses').map(l => l.listing_id);
         const equipmentIds = listingFavs.filter(l => l.listing_type === 'equipment' || l.listing_type === 'tack').map(l => l.listing_id);
 
         const [horses, equipment] = await Promise.all([
@@ -1320,14 +1320,15 @@ const start = async () => {
             await prisma.$executeRawUnsafe(`UPDATE public.${table} SET favorites_count = GREATEST(COALESCE(favorites_count, 0) - 1, 0) WHERE id = $1::uuid`, existing.listing_id);
             return { favorited: false };
           } else {
+            const normalizedType = listingType === 'horses' ? 'horse' : (listingType || 'horse');
             await prisma.listing_favorites.create({
               data: {
                 user_id: req.user.id,
                 listing_id: id,
-                listing_type: listingType || 'horse'
+                listing_type: normalizedType
               }
             });
-            const table = (listingType || 'horse') === 'equipment' ? 'equipment_listings' : 'horse_listings';
+            const table = normalizedType === 'equipment' ? 'equipment_listings' : 'horse_listings';
             await prisma.$executeRawUnsafe(`UPDATE public.${table} SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
             return { favorited: true };
           }
