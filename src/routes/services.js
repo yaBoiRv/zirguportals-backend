@@ -154,8 +154,16 @@ module.exports = async function servicesRoutes(fastify) {
             for (const [key, col] of Object.entries(mappings)) {
                 if (b[key] !== undefined) {
                     let val = b[key];
-                    if (key === 'regions_served') val = JSON.stringify(val);
-                    fields.push(`${col} = $${idx++}`);
+                    let placeholder = `$${idx++}`;
+
+                    if (key === 'specialties') {
+                        placeholder += '::text[]';
+                    } else if (key === 'regions_served') {
+                        val = JSON.stringify(val);
+                        placeholder += '::jsonb';
+                    }
+
+                    fields.push(`${col} = ${placeholder}`);
                     values.push(val);
                 }
             }

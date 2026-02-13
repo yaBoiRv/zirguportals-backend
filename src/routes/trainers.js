@@ -122,7 +122,7 @@ module.exports = async function trainersRoutes(fastify) {
           phone, website_url, photo_url, age, specialties, languages, 
           certifications, certification_details, files, visible
         ) VALUES (
-          $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15, $16
+          $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12::text[], $13::text[], $14::jsonb, $15::text[], $16
         ) RETURNING id`,
                 userId,
                 b.name,
@@ -195,8 +195,16 @@ module.exports = async function trainersRoutes(fastify) {
             for (const [key, col] of Object.entries(mappings)) {
                 if (b[key] !== undefined) {
                     let val = b[key];
-                    if (key === 'certification_details') val = JSON.stringify(val);
-                    fields.push(`${col} = $${idx++}`);
+                    let placeholder = `$${idx++}`;
+
+                    if (['specialties', 'languages', 'certifications', 'files'].includes(key)) {
+                        placeholder += '::text[]';
+                    } else if (key === 'certification_details') {
+                        val = JSON.stringify(val);
+                        placeholder += '::jsonb';
+                    }
+
+                    fields.push(`${col} = ${placeholder}`);
                     values.push(val);
                 }
             }
