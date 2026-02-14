@@ -208,17 +208,25 @@ module.exports = async function chatRoutes(fastify) {
             if (!participant) return reply.code(403).send({ error: "not a participant" });
 
             const messages = await prisma.message.findMany({
-                where: { conversationId },
+                where: { conversationId: req.params.id }, // Use params.id directly or ensure variable usage matches
                 orderBy: { createdAt: "desc" },
                 take: limit,
-                ...(cursor
-                    ? { skip: 1, cursor: { id: String(cursor) } } // prisma cursor pagination
+                ...(req.query.cursor
+                    ? { cursor: { id: req.query.cursor }, skip: 1 }
                     : {}),
                 include: { sender: { select: { id: true, userId: true, name: true, username: true, avatarUrl: true } } },
             });
 
+            // Map messages to parse attachments
+            const mappedMessages = messages.reverse().map(m => ({
+                ...m,
+                files: m.attachments ? m.attachments.map(a => {
+                    try { return JSON.parse(a); } catch (e) { return null; }
+                }).filter(Boolean) : []
+            }));
+
             return reply.send({
-                messages: messages.reverse(), // oldest -> newest for UI
+                messages: mappedMessages,
                 nextCursor: messages.length ? messages[0].id : null,
             });
         }

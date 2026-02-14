@@ -939,9 +939,9 @@ const start = async () => {
         socket.emit("chat:joined", { conversationId });
       });
 
-      socket.on("chat:send", async ({ conversationId, body }) => {
+      socket.on("chat:send", async ({ conversationId, body, files }) => {
         try {
-          if (!conversationId || !body) return;
+          if (!conversationId || (!body && (!files || files.length === 0))) return;
 
           const participant = await prisma.conversationParticipant.findUnique({
             where: { conversationId_userId: { conversationId, userId: socket.user.id } },
@@ -952,21 +952,29 @@ const start = async () => {
             return;
           }
 
+          // Convert file objects to strings for storage if they exist
+          const attachmentStrings = files ? files.map(f => JSON.stringify(f)) : [];
+
           const msg = await prisma.message.create({
             data: {
               conversationId,
               senderId: socket.user.id,
-              content: String(body).slice(0, 5000), // Map body -> content
+              content: body ? String(body).slice(0, 5000) : "",
+              attachments: attachmentStrings,
             },
             include: { sender: { select: { id: true, userId: true, name: true, username: true, avatarUrl: true } } },
           });
 
+          // Send back to clients (parse attachments back to objects for frontend convenience if needed, 
+          // but frontend expects what it gets from DB usually. 
+          // Actually, let's send the objects directly in the socket event so frontend doesn't need to parse strings immediately)
           io.to(`conv:${conversationId}`).emit("chat:new_message", {
             id: msg.id,
             conversationId: msg.conversationId,
             content: msg.content,
             createdAt: msg.createdAt,
             sender: msg.sender,
+            files: files || [], // Pass original objects for immediate display
           });
         } catch (e) {
           fastify.log.error(e);
