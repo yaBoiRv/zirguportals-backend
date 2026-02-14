@@ -22,6 +22,20 @@ module.exports = async function forumRoutes(fastify) {
         }
     }
 
+    // Helper to handle mixed file types (string urls or JSON strings)
+    const parseFile = (f) => {
+        try {
+            // If it's already an object (unlikely from DB but possible if Prisma mapped it?), return it
+            if (typeof f === 'object') return f;
+            const parsed = JSON.parse(f);
+            return typeof parsed === 'object' ? parsed : { url: f, name: f.split('/').pop() };
+        } catch {
+            return { url: f, name: f.split('/').pop() };
+        }
+    };
+
+    const stringifyFile = (f) => typeof f === 'object' ? JSON.stringify(f) : f;
+
     // GET /forums/topics
     fastify.get('/topics', async (req, reply) => {
         const { category, limit = 50, offset = 0 } = req.query;
@@ -61,6 +75,7 @@ module.exports = async function forumRoutes(fastify) {
                         username: t.user?.profile?.username,
                         avatar_url: t.user?.profile?.avatarUrl
                     },
+                    files: t.files ? t.files.map(parseFile) : [],
                     replies_count: t._count.replies,
                     likes_count: t._count.likes
                 })),
@@ -88,11 +103,14 @@ module.exports = async function forumRoutes(fastify) {
                     content,
                     category,
                     images,
-                    files,
+                    files: files.map(stringifyFile),
                     userId
                 }
             });
-            return topic;
+            return {
+                ...topic,
+                files: topic.files.map(parseFile)
+            };
         } catch (e) {
             console.error(e);
             return reply.code(500).send({ error: 'Failed to create topic' });
@@ -130,6 +148,7 @@ module.exports = async function forumRoutes(fastify) {
                     username: topic.user?.profile?.username,
                     avatar_url: topic.user?.profile?.avatarUrl
                 },
+                files: topic.files ? topic.files.map(parseFile) : [],
                 replies_count: topic._count.replies,
                 likes_count: topic._count.likes
             };
@@ -172,6 +191,7 @@ module.exports = async function forumRoutes(fastify) {
                     avatar_url: r.user.profile.avatarUrl
                 } : null,
                 reply_to_profile: null, // Relation missing, skip for now
+                files: r.files ? r.files.map(parseFile) : [],
                 likes_count: r._count.likes
             }));
         } catch (e) {
@@ -198,7 +218,7 @@ module.exports = async function forumRoutes(fastify) {
                     userId,
                     parentId: parent_id,
                     images,
-                    files
+                    files: files.map(stringifyFile)
                 },
                 include: {
                     user: {
@@ -213,6 +233,7 @@ module.exports = async function forumRoutes(fastify) {
 
             return {
                 ...replyRecord,
+                files: replyRecord.files.map(parseFile),
                 profiles: replyRecord.user?.profile ? {
                     name: replyRecord.user.profile.name,
                     username: replyRecord.user.profile.username,
@@ -224,4 +245,4 @@ module.exports = async function forumRoutes(fastify) {
             return reply.code(500).send({ error: 'Failed to create reply' });
         }
     });
-};
+
