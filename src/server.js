@@ -618,8 +618,10 @@ fastify.get("/files/:bucket/*", async (req, reply) => {
     reply.header("Cross-Origin-Resource-Policy", "cross-origin");
 
     if (req.query.download) {
-      const filename = key.split("/").pop() || "download";
-      reply.header("Content-Disposition", `attachment; filename="${filename}"`);
+      const filename = req.query.filename || key.split("/").pop() || "download";
+      // Sanitize filename to avoid header encoding issues
+      const safeFilename = filename.replace(/"/g, '\\"');
+      reply.header("Content-Disposition", `attachment; filename="${safeFilename}"`);
     }
 
     return reply.send(obj.Body);
