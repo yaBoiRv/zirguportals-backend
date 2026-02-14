@@ -34,7 +34,8 @@ module.exports = async function forumRoutes(fastify) {
         }
     };
 
-    const stringifyFile = (f) => typeof f === 'object' ? JSON.stringify(f) : f;
+    // Helper to ensure we only save the URL string for images (compatibility)
+    const extractUrl = (f) => typeof f === 'object' ? f.url : f;
 
     // GET /forums/topics
     fastify.get('/topics', async (req, reply) => {
@@ -102,7 +103,7 @@ module.exports = async function forumRoutes(fastify) {
                     title,
                     content,
                     category,
-                    images,
+                    images: images.map(extractUrl),
                     files: files.map(stringifyFile),
                     userId
                 }
@@ -179,10 +180,6 @@ module.exports = async function forumRoutes(fastify) {
                 }
             });
 
-            // Map replies and fetch reply_to_profile manually if needed (or skip for now)
-            // Since replyToUser relation is missing in Prisma schema, we can't include it directly.
-            // For now, we'll return null for reply_to_profile to prevent crashes.
-
             return replies.map(r => ({
                 ...r,
                 profiles: r.user?.profile ? {
@@ -190,7 +187,7 @@ module.exports = async function forumRoutes(fastify) {
                     username: r.user.profile.username,
                     avatar_url: r.user.profile.avatarUrl
                 } : null,
-                reply_to_profile: null, // Relation missing, skip for now
+                reply_to_profile: null,
                 files: r.files ? r.files.map(parseFile) : [],
                 likes_count: r._count.likes
             }));
@@ -203,7 +200,7 @@ module.exports = async function forumRoutes(fastify) {
     // POST /forums/topics/:id/replies - Create a new reply
     fastify.post('/topics/:id/replies', { preHandler: requireAuth }, async (req, reply) => {
         const { id } = req.params;
-        const { content, images = [], files = [], parent_id = null, reply_to_user_id = null } = req.body;
+        const { content, images = [], files = [], parent_id = null } = req.body;
         const userId = req.user.id;
 
         if (!content) {
@@ -211,25 +208,32 @@ module.exports = async function forumRoutes(fastify) {
         }
 
         try {
-            const replyRecord = await prisma.forumReply.create({
-                data: {
-                    topicId: id,
-                    content,
-                    userId,
-                    parentId: parent_id,
-                    images,
-                    files: files.map(stringifyFile)
-                },
-                include: {
-                    user: {
-                        include: {
-                            profile: {
-                                select: { name: true, username: true, avatarUrl: true }
+            // Use transaction to update reply count on topic
+            const [replyRecord] = await prisma.$transaction([
+                prisma.forumReply.create({
+                    data: {
+                        topicId: id,
+                        content,
+                        userId,
+                        parentId: parent_id,
+                        images: images.map(extractUrl),
+                        files: files.map(stringifyFile)
+                    },
+                    include: {
+                        user: {
+                            include: {
+                                profile: {
+                                    select: { name: true, username: true, avatarUrl: true }
+                                }
                             }
                         }
                     }
-                }
-            });
+                }),
+                prisma.forumTopic.update({
+                    where: { id },
+                    data: { repliesCount: { increment: 1 }, last_reply_at: new Date() }
+                })
+            ]);
 
             return {
                 ...replyRecord,
@@ -243,6 +247,104 @@ module.exports = async function forumRoutes(fastify) {
         } catch (e) {
             console.error(e);
             return reply.code(500).send({ error: 'Failed to create reply' });
+        }
+    });
+
+    // POST /forums/topics/:id/like - Toggle like on a topic
+    fastify.post('/topics/:id/like', { preHandler: requireAuth }, async (req, reply) => {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        try {
+            const existingLike = await prisma.forumLike.findUnique({
+                where: {
+                    userId_topicId: {
+                        userId,
+                        topicId: id
+                    }
+                }
+            });
+
+            if (existingLike) {
+                // Unlike
+                await prisma.$transaction([
+                    prisma.forumLike.delete({
+                        where: { id: existingLike.id }
+                    }),
+                    prisma.forumTopic.update({
+                        where: { id },
+                        data: { likesCount: { decrement: 1 } }
+                    })
+                ]);
+                return { liked: false };
+            } else {
+                // Like
+                await prisma.$transaction([
+                    prisma.forumLike.create({
+                        data: {
+                            userId,
+                            topicId: id
+                        }
+                    }),
+                    prisma.forumTopic.update({
+                        where: { id },
+                        data: { likesCount: { increment: 1 } }
+                    })
+                ]);
+                return { liked: true };
+            }
+        } catch (e) {
+            console.error(e);
+            return reply.code(500).send({ error: 'Failed to toggle like' });
+        }
+    });
+
+    // POST /forums/replies/:id/like - Toggle like on a reply
+    fastify.post('/replies/:id/like', { preHandler: requireAuth }, async (req, reply) => {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        try {
+            const existingLike = await prisma.forumLike.findUnique({
+                where: {
+                    userId_replyId: {
+                        userId,
+                        replyId: id
+                    }
+                }
+            });
+
+            if (existingLike) {
+                // Unlike
+                await prisma.$transaction([
+                    prisma.forumLike.delete({
+                        where: { id: existingLike.id }
+                    }),
+                    prisma.forumReply.update({
+                        where: { id },
+                        data: { likesCount: { decrement: 1 } }
+                    })
+                ]);
+                return { liked: false };
+            } else {
+                // Like
+                await prisma.$transaction([
+                    prisma.forumLike.create({
+                        data: {
+                            userId,
+                            replyId: id
+                        }
+                    }),
+                    prisma.forumReply.update({
+                        where: { id },
+                        data: { likesCount: { increment: 1 } }
+                    })
+                ]);
+                return { liked: true };
+            }
+        } catch (e) {
+            console.error(e);
+            return reply.code(500).send({ error: 'Failed to toggle like' });
         }
     });
 };
