@@ -62,6 +62,7 @@ model User {
   forumLikes                                        ForumLike[]
   forumReplies                                      ForumReply[]
   forumTopics                                       ForumTopic[]
+  forumFavorites                                    ForumFavorite[]
   horse_listings                                    horse_listings[]
   profile                                           Profile?
   service_favorites                                 service_favorites[]
@@ -520,6 +521,7 @@ model ForumTopic {
   group_id      String?       @db.Uuid
   files         String[]      @default([])
   viewsCount    Int           @default(0) @map("views_count")
+  favorites     ForumFavorite[]
   likes         ForumLike[]
   replies       ForumReply[]
   forum_groups  forum_groups? @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -562,8 +564,22 @@ model ForumLike {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([userId, topicId])
+
   @@unique([userId, replyId])
   @@map("forum_likes")
+  @@schema("public")
+}
+
+model ForumFavorite {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String     @map("user_id") @db.Uuid
+  topicId   String     @map("topic_id") @db.Uuid
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  topic     ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, topicId])
+  @@map("forum_favorites")
   @@schema("public")
 }
 
