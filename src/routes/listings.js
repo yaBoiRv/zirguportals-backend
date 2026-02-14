@@ -323,7 +323,11 @@ module.exports = async function listingsRoutes(fastify) {
             for (const [key, col] of Object.entries(mappings)) {
                 if (b[key] !== undefined) {
                     if (fields.some(f => f.startsWith(`${col} =`))) continue;
-                    fields.push(`${col} = $${idx++}`);
+
+                    let placeholder = `$${idx++}`;
+                    if (key === 'sold_at') placeholder += '::timestamptz';
+
+                    fields.push(`${col} = ${placeholder}`);
                     values.push(b[key]);
                 }
             }
@@ -612,7 +616,11 @@ module.exports = async function listingsRoutes(fastify) {
             for (const [key, col] of Object.entries(mappings)) {
                 if (b[key] !== undefined) {
                     if (fields.some(f => f.startsWith(`${col} =`))) continue;
-                    fields.push(`${col} = $${idx++}`);
+
+                    let placeholder = `$${idx++}`;
+                    if (key === 'sold_at') placeholder += '::timestamptz';
+
+                    fields.push(`${col} = ${placeholder}`);
                     values.push(b[key]);
                 }
             }
