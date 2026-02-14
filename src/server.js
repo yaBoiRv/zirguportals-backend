@@ -617,6 +617,11 @@ fastify.get("/files/:bucket/*", async (req, reply) => {
     // prevents ERR_BLOCKED_BY_RESPONSE.NotSameOrigin for images
     reply.header("Cross-Origin-Resource-Policy", "cross-origin");
 
+    if (req.query.download) {
+      const filename = key.split("/").pop() || "download";
+      reply.header("Content-Disposition", `attachment; filename="${filename}"`);
+    }
+
     return reply.send(obj.Body);
   } catch (e) {
     req.log.error(e);
