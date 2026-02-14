@@ -245,4 +245,5 @@ module.exports = async function forumRoutes(fastify) {
             return reply.code(500).send({ error: 'Failed to create reply' });
         }
     });
+};
 
