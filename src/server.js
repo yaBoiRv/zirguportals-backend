@@ -1164,9 +1164,9 @@ const start = async () => {
         socket.emit("chat:joined", { conversationId });
       });
 
-      socket.on("chat:send", async ({ conversationId, body, files }) => {
+      socket.on("chat:send", async ({ conversationId, body }) => {
         try {
-          if (!conversationId || (!body && (!files || files.length === 0))) return;
+          if (!conversationId || !body) return;
 
           const participant = await prisma.conversationParticipant.findUnique({
             where: { conversationId_userId: { conversationId, userId: socket.user.id } },
@@ -1181,8 +1181,7 @@ const start = async () => {
             data: {
               conversationId,
               senderId: socket.user.id,
-              content: String(body || "").slice(0, 5000), // Map body -> content
-              attachments: files || [], // Store files as JSON
+              content: String(body).slice(0, 5000), // Map body -> content
             },
             include: { sender: { select: { id: true, userId: true, name: true, username: true, avatarUrl: true } } },
           });
@@ -1193,7 +1192,6 @@ const start = async () => {
             content: msg.content,
             createdAt: msg.createdAt,
             sender: msg.sender,
-            files: msg.attachments, // Return files
           });
         } catch (e) {
           fastify.log.error(e);
@@ -1440,27 +1438,6 @@ const start = async () => {
       fastify.log.info({ updatedCreated, updatedUpdated }, "Data integrity check completed.");
     } catch (err) {
       fastify.log.error(err, "Data integrity fix failed (ignoring if benign).");
-    }
-
-    // --- FORCE FIX ATTACHMENTS TYPE ---
-    try {
-      fastify.log.info("Migrating messages.attachments column if needed...");
-      await prisma.$executeRawUnsafe(`
-        DO $$ 
-        BEGIN 
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='attachments' AND data_type='ARRAY') THEN
-            ALTER TABLE public.messages 
-            ALTER COLUMN attachments TYPE jsonb 
-            USING to_jsonb(attachments);
-            
-            ALTER TABLE public.messages 
-            ALTER COLUMN attachments SET DEFAULT '[]'::jsonb;
-            END IF;
-        END $$;
-      `);
-      fastify.log.info("Messages attachments migration completed.");
-    } catch (err) {
-      fastify.log.error(err, "Attachments migration failed.");
     }
     // -------------------------------------------
 
