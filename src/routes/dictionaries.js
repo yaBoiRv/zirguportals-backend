@@ -197,37 +197,34 @@ module.exports = async function dictionariesRoutes(fastify) {
 
       case 'equipment-materials': {
         const eqTypeId = request.query.equipmentTypeId ? Number(request.query.equipmentTypeId) : null;
-        let sql = `
-              SELECT b.id, b.key, t.name 
-              FROM public.equipment_materials b
-              LEFT JOIN public.equipment_material_translations t ON t.material_id = b.id AND t.lang_code = $1
-          `;
+        let sql;
         const params = [lang];
+
         if (eqTypeId) {
-          sql += ` WHERE b.equipment_type_id = $2 `;
+          sql = `
+            SELECT b.id, b.key, t.name
+            FROM public.equipment_materials b
+            JOIN public.equipment_type_materials etm ON etm.material_id = b.id
+            LEFT JOIN public.equipment_material_translations t ON t.material_id = b.id AND t.lang_code = $1
+            WHERE etm.equipment_type_id = $2
+            ORDER BY COALESCE(t.name, b.key) ASC
+          `;
           params.push(eqTypeId);
+        } else {
+          sql = `
+            SELECT b.id, b.key, t.name 
+            FROM public.equipment_materials b
+            LEFT JOIN public.equipment_material_translations t ON t.material_id = b.id AND t.lang_code = $1
+            ORDER BY COALESCE(t.name, b.key) ASC
+          `;
         }
-        sql += ` ORDER BY COALESCE(t.name, b.key) ASC`;
 
         try {
           const materials = await prisma.$queryRawUnsafe(sql, ...params);
           return materials.map(r => ({ id: r.id, key: r.key, name: r.name ?? r.key }));
         } catch (err) {
-          // Some installations may not have equipment_type_id column on equipment_materials.
-          // Retry without filtering by equipment_type_id so the endpoint remains usable.
-          console.warn('equipment-materials query failed, retrying without equipment_type filter:', err.message || err);
-          try {
-            const fallbackSql = `
-              SELECT b.id, b.key, t.name
-              FROM public.equipment_materials b
-              LEFT JOIN public.equipment_material_translations t ON t.material_id = b.id AND t.lang_code = $1
-              ORDER BY COALESCE(t.name, b.key) ASC`;
-            const materials = await prisma.$queryRawUnsafe(fallbackSql, lang);
-            return materials.map(r => ({ id: r.id, key: r.key, name: r.name ?? r.key }));
-          } catch (err2) {
-            console.error('Fallback equipment-materials query also failed:', err2.message || err2);
-            return [];
-          }
+          console.error('equipment-materials query failed:', err.message || err);
+          return [];
         }
       }
 
