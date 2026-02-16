@@ -39,7 +39,7 @@ module.exports = async function forumRoutes(fastify) {
 
     // GET /forums/topics
     fastify.get('/topics', async (req, reply) => {
-        const { category, limit = 50, offset = 0, search, liked_only, favorited_only } = req.query;
+        const { category, limit = 50, offset = 0, search, liked_only } = req.query;
 
         // Extract user ID from token if present
         let userId = null;
@@ -94,27 +94,21 @@ module.exports = async function forumRoutes(fastify) {
                 }
             }
 
-            if (req.query.favorited_only === 'true') {
-                const auth = req.headers.authorization || '';
-                const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-                if (!token) return reply.code(401).send({ error: 'Authentication required for favorites' });
-
-                try {
-                    const payload = fastify.jwt.verify(token);
-                    const userId = payload.sub;
-                    where.favorites = {
-                        some: {
-                            userId: userId
+            const include = {
+                user: {
+                    include: {
+                        profile: {
+                            select: { name: true, username: true, avatarUrl: true }
                         }
-                    };
-                } catch (e) {
-                    const decoded = fastify.jwt.decode(token);
-                    if (decoded?.sub) {
-                        where.favorites = { some: { userId: decoded.sub } };
-                    } else {
-                        return reply.code(401).send({ error: 'Invalid token' });
                     }
+                },
+                _count: {
+                    select: { replies: true, likes: true }
                 }
+            };
+
+            if (userId) {
+                include.likes = { where: { userId } };
             }
 
             const [items, count] = await Promise.all([
@@ -123,18 +117,7 @@ module.exports = async function forumRoutes(fastify) {
                     orderBy: { createdAt: 'desc' },
                     take: Number(limit),
                     skip: Number(offset),
-                    include: {
-                        user: {
-                            include: {
-                                profile: {
-                                    select: { name: true, username: true, avatarUrl: true }
-                                }
-                            }
-                        },
-                        _count: {
-                            select: { replies: true, likes: true }
-                        }
-                    }
+                    include
                 }),
                 prisma.forumTopic.count({ where })
             ]);
@@ -150,8 +133,7 @@ module.exports = async function forumRoutes(fastify) {
                     files: t.files ? t.files.map(parseFile) : [],
                     replies_count: t._count.replies,
                     likes_count: t._count.likes,
-                    is_liked: userId ? (t.likes && t.likes.length > 0) : false,
-                    is_favorited: userId ? (t.favorites && t.favorites.length > 0) : false
+                    is_liked: userId ? (t.likes && t.likes.length > 0) : false
                 })),
                 count
             };
@@ -223,11 +205,6 @@ module.exports = async function forumRoutes(fastify) {
                 }
             };
 
-            if (userId) {
-                include.likes = { where: { userId } };
-                include.favorites = { where: { userId } };
-            }
-
             const topic = await prisma.forumTopic.findUnique({
                 where: { id },
                 include
@@ -247,8 +224,7 @@ module.exports = async function forumRoutes(fastify) {
                 files: topic.files ? topic.files.map(parseFile) : [],
                 replies_count: topic._count.replies,
                 likes_count: topic._count.likes,
-                is_liked: userId ? (topic.likes && topic.likes.length > 0) : false,
-                is_favorited: userId ? (topic.favorites && topic.favorites.length > 0) : false
+                is_liked: userId ? (topic.likes && topic.likes.length > 0) : false
             };
         } catch (e) {
             console.error(e);
@@ -344,43 +320,6 @@ module.exports = async function forumRoutes(fastify) {
         } catch (e) {
             console.error(e);
             return reply.code(500).send({ error: 'Failed to create reply' });
-        }
-    });
-
-    // POST /forums/topics/:id/favorite
-    fastify.post('/topics/:id/favorite', { preHandler: requireAuth }, async (req, reply) => {
-        const { id } = req.params;
-        const userId = req.user.id;
-
-        try {
-            const existingFavorite = await prisma.forumFavorite.findUnique({
-                where: {
-                    userId_topicId: {
-                        userId,
-                        topicId: id
-                    }
-                }
-            });
-
-            if (existingFavorite) {
-                // Remove favorite
-                await prisma.forumFavorite.delete({
-                    where: { id: existingFavorite.id }
-                });
-                return { favorited: false };
-            } else {
-                // Add favorite
-                await prisma.forumFavorite.create({
-                    data: {
-                        userId,
-                        topicId: id
-                    }
-                });
-                return { favorited: true };
-            }
-        } catch (e) {
-            console.error(e);
-            return reply.code(500).send({ error: 'Failed to toggle favorite' });
         }
     });
 
