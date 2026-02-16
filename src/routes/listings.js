@@ -29,18 +29,25 @@ module.exports = async function listingsRoutes(fastify) {
         try {
             const {
                 user_id, min_price, max_price, min_age, max_age, min_height, max_height,
-                breed_id, sex_id, search, sort, limit = 50, offset = 0, include_hidden
+                breed_id, sex_id, search, sort, limit = 50, offset = 0, include_hidden, lang = 'en'
             } = req.query;
 
             let sql = `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar,
+                              COALESCE(hbt.name, hb.key, pbt.name, pb.key, l.custom_breed, l.custom_pony_breed) as breed,
                               ARRAY(SELECT color_id FROM public.horse_listing_colors WHERE listing_id = l.id) as color_ids,
                               ARRAY(SELECT discipline_id FROM public.horse_listing_disciplines WHERE listing_id = l.id) as discipline_ids,
                               ARRAY(SELECT temperament_id FROM public.horse_listing_temperaments WHERE listing_id = l.id) as temperament_ids
                        FROM public.horse_listings l
                        LEFT JOIN public.profiles p ON p.user_id = l.user_id
+                       LEFT JOIN public.horse_breeds hb ON hb.id = l.breed_id
+                       LEFT JOIN public.horse_breed_translations hbt ON hbt.breed_id = hb.id AND hbt.lang_code = $1
+                       LEFT JOIN public.pony_breeds pb ON pb.id = l.pony_breed_id
+                       LEFT JOIN public.pony_breed_translations pbt ON pbt.breed_id = pb.id AND pbt.lang_code = $1
                        WHERE 1=1`;
-            const params = [];
-            let pIdx = 1;
+
+            // $1 is lang
+            const params = [lang];
+            let pIdx = 2;
 
             if (include_hidden !== 'true') {
                 sql += ` AND l.visible = true`;
@@ -157,13 +164,20 @@ module.exports = async function listingsRoutes(fastify) {
     // GET /listings/horses/:id
     fastify.get('/horses/:id', async (req, reply) => {
         const { id } = req.params;
+        const lang = req.query.lang || 'en';
+
         try {
             const rows = await prisma.$queryRawUnsafe(
-                `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar, p.phone as seller_phone, p.created_at as seller_member_since
+                `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar, p.phone as seller_phone, p.created_at as seller_member_since,
+                        COALESCE(hbt.name, hb.key, pbt.name, pb.key, l.custom_breed, l.custom_pony_breed) as breed
                  FROM public.horse_listings l
                  LEFT JOIN public.profiles p ON p.user_id = l.user_id
+                 LEFT JOIN public.horse_breeds hb ON hb.id = l.breed_id
+                 LEFT JOIN public.horse_breed_translations hbt ON hbt.breed_id = hb.id AND hbt.lang_code = $2
+                 LEFT JOIN public.pony_breeds pb ON pb.id = l.pony_breed_id
+                 LEFT JOIN public.pony_breed_translations pbt ON pbt.breed_id = pb.id AND pbt.lang_code = $2
                  WHERE l.id = $1::uuid`,
-                id
+                id, lang
             );
             if (!rows.length) return reply.code(404).send({ error: 'Listing not found' });
 
@@ -422,16 +436,21 @@ module.exports = async function listingsRoutes(fastify) {
         try {
             const {
                 user_id, equipmentType_ids, brand_ids, material_ids, condition_ids,
-                min_price, max_price, search, sort, limit = 50, offset = 0, include_hidden
+                min_price, max_price, search, sort, limit = 50, offset = 0, include_hidden, lang = 'en'
             } = req.query;
 
             let sql = `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar,
+                              COALESCE(ett.name, et.key, l.custom_equipment_type) as equipment_type,
+                              b.name as brand,
                               ARRAY(SELECT color_id FROM public.equipment_listing_colors WHERE listing_id = l.id) as color_ids
                        FROM public.equipment_listings l
                        LEFT JOIN public.profiles p ON p.user_id = l.user_id
+                       LEFT JOIN public.equipment_types et ON et.id = l.equipment_type_id
+                       LEFT JOIN public.equipment_type_translations ett ON ett.type_id = et.id AND ett.lang_code = $1
+                       LEFT JOIN public.equipment_brands b ON b.id = l.brand_id
                        WHERE 1=1`;
-            const params = [];
-            let pIdx = 1;
+            const params = [lang];
+            let pIdx = 2;
 
             if (include_hidden !== 'true') {
                 sql += ` AND l.visible = true`;
