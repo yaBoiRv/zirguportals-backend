@@ -118,6 +118,31 @@ module.exports = async function announcementsRoutes(fastify) {
                 }
             });
 
+            // Broadcast Notification to all users
+            try {
+                const allUsers = await prisma.user.findMany({ select: { id: true } });
+                const notifications = allUsers
+                    .filter(u => u.id !== req.user.id)
+                    .map(u => ({
+                        user_id: u.id,
+                        type: 'new_announcement',
+                        title: 'New Announcement',
+                        content: title,
+                        source_type: 'announcement',
+                        source_id: announcement.id,
+                        source_user_id: req.user.id,
+                        metadata: {}
+                    }));
+
+                if (notifications.length > 0) {
+                    await prisma.notifications.createMany({
+                        data: notifications
+                    });
+                }
+            } catch (err) {
+                console.error('Error broadcasting announcement notification:', err);
+            }
+
             return {
                 ...announcement,
                 user_id: announcement.userId,

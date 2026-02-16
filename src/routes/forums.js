@@ -308,6 +308,35 @@ module.exports = async function forumRoutes(fastify) {
                 })
             ]);
 
+            // Create Notification for topic author
+            try {
+                const topic = await prisma.forumTopic.findUnique({
+                    where: { id },
+                    select: { userId: true, title: true }
+                });
+
+                if (topic && topic.userId !== userId) {
+                    const replierName = replyRecord.user?.profile?.name || 'Someone';
+                    await prisma.notifications.create({
+                        data: {
+                            user_id: topic.userId,
+                            type: 'forum_reply',
+                            title: 'New reply to your topic',
+                            content: `${replierName} replied to "${topic.title}"`,
+                            source_type: 'forum_topic',
+                            source_id: id,
+                            source_user_id: userId,
+                            metadata: {
+                                reply_id: replyRecord.id,
+                                topic_title: topic.title
+                            }
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Error creating forum notification:', err);
+            }
+
             return {
                 ...replyRecord,
                 files: replyRecord.files.map(parseFile),
