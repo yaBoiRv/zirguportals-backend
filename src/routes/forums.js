@@ -37,6 +37,9 @@ module.exports = async function forumRoutes(fastify) {
     // Helper to ensure we only save the URL string for images (compatibility)
     const extractUrl = (f) => typeof f === 'object' ? f.url : f;
 
+    // Helper to stringify file objects for storage
+    const stringifyFile = (f) => typeof f === 'object' ? JSON.stringify(f) : f;
+
     // GET /forums/topics
     fastify.get('/topics', async (req, reply) => {
         const { category, limit = 50, offset = 0, search, liked_only } = req.query;
