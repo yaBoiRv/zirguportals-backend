@@ -1,4 +1,5 @@
 'use strict';
+const { sendEmail } = require('../services/emailService');
 
 module.exports = async function forumRoutes(fastify) {
     const prisma = fastify.prisma;
@@ -362,6 +363,39 @@ module.exports = async function forumRoutes(fastify) {
                             }
                         }
                     });
+
+                    // Send Email Notification
+                    try {
+                        const recipient = await prisma.user.findUnique({
+                            where: { id: recipientId },
+                            select: {
+                                email: true,
+                                profile: { select: { notificationPreferences: true } }
+                            }
+                        });
+
+                        const prefs = recipient?.profile?.notificationPreferences || {};
+                        // Check explicit false (default true)
+                        if (recipient?.email && prefs.forum_replies !== false) {
+                            const link = `${process.env.APP_WEB_URL || 'http://localhost:8083'}/forums/topic/${id}`;
+                            const html = `
+                                <h2>${msg.title}</h2>
+                                <p>${msg.content}</p>
+                                <p><a href="${link}">View Reply</a></p>
+                                <hr/>
+                                <small>You can change your notification preferences in your profile settings.</small>
+                            `;
+                            // Don't await email sending to keep response fast? Or lightweight await?
+                            // sendEmail is async but returns promise. User didn't ask for background job.
+                            // I'll execute it without await to not block? 
+                            // But usually await is safer to catch errors immediately if critical. 
+                            // Notifications are usually async.
+                            // I'll catch errors inside loop so it doesn't break response.
+                            sendEmail({ to: recipient.email, subject: msg.title, html }).catch(console.error);
+                        }
+                    } catch (emailErr) {
+                        console.error('Failed to process email notification:', emailErr);
+                    }
                 }
             } catch (err) {
                 console.error('Error creating forum notification:', err);
