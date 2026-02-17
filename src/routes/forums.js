@@ -208,6 +208,16 @@ module.exports = async function forumRoutes(fastify) {
                 }
             };
 
+            if (userId) {
+                include.likes = { where: { userId } };
+            }
+
+            if (userId) {
+                include.likes = {
+                    where: { userId }
+                };
+            }
+
             const topic = await prisma.forumTopic.findUnique({
                 where: { id },
                 include
@@ -302,7 +312,8 @@ module.exports = async function forumRoutes(fastify) {
                                     select: { name: true, username: true, avatarUrl: true }
                                 }
                             }
-                        }
+                        },
+                        parent: { select: { userId: true } }
                     }
                 }),
                 prisma.forumTopic.update({
@@ -311,21 +322,37 @@ module.exports = async function forumRoutes(fastify) {
                 })
             ]);
 
-            // Create Notification for topic author
+            // Create Notification
             try {
                 const topic = await prisma.forumTopic.findUnique({
                     where: { id },
                     select: { userId: true, title: true }
                 });
 
+                const replierName = replyRecord.user?.profile?.name || 'Someone';
+                const recipients = new Map();
+
                 if (topic && topic.userId !== userId) {
-                    const replierName = replyRecord.user?.profile?.name || 'Someone';
+                    recipients.set(topic.userId, {
+                        title: 'New reply to your topic',
+                        content: `${replierName} replied to "${topic.title}"`
+                    });
+                }
+
+                if (replyRecord.parent && replyRecord.parent.userId !== userId) {
+                    recipients.set(replyRecord.parent.userId, {
+                        title: 'New reply to your comment',
+                        content: `${replierName} replied to your comment in "${topic.title}"`
+                    });
+                }
+
+                for (const [recipientId, msg] of recipients) {
                     await prisma.notifications.create({
                         data: {
-                            user_id: topic.userId,
+                            user_id: recipientId,
                             type: 'forum_reply',
-                            title: 'New reply to your topic',
-                            content: `${replierName} replied to "${topic.title}"`,
+                            title: msg.title,
+                            content: msg.content,
                             source_type: 'forum_topic',
                             source_id: id,
                             source_user_id: userId,

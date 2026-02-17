@@ -1178,18 +1178,37 @@ const start = async () => {
     // --- NOTIFICATIONS ---
     fastify.get("/notifications", { preHandler: requireAuth }, async (req, reply) => {
       try {
-        const notifs = await prisma.notifications.findMany({
-          where: { user_id: req.user.id },
-          orderBy: { created_at: 'desc' },
-          take: 50
-        });
-        const unread = await prisma.notifications.count({
-          where: { user_id: req.user.id, read_at: null }
-        });
-        return { notifications: notifs, unread_count: unread };
+        const { limit = 20, offset = 0 } = req.query;
+        const take = parseInt(limit);
+        const skip = parseInt(offset);
+
+        const [notifs, unread, total] = await Promise.all([
+          prisma.notifications.findMany({
+            where: { user_id: req.user.id },
+            orderBy: { created_at: 'desc' },
+            take,
+            skip
+          }),
+          prisma.notifications.count({
+            where: { user_id: req.user.id, read_at: null }
+          }),
+          prisma.notifications.count({
+            where: { user_id: req.user.id }
+          })
+        ]);
+
+        return {
+          notifications: notifs,
+          unread_count: unread,
+          pagination: {
+            total,
+            limit: take,
+            offset: skip
+          }
+        };
       } catch (e) {
         fastify.log.error(e);
-        return { notifications: [], unread_count: 0 };
+        return { notifications: [], unread_count: 0, pagination: { total: 0, limit: 20, offset: 0 } };
       }
     });
 
