@@ -375,8 +375,12 @@ module.exports = async function forumRoutes(fastify) {
                         });
 
                         const prefs = recipient?.profile?.notificationPreferences || {};
+                        const shouldSend = recipient?.email && prefs.forum_replies !== false;
+
+                        console.log(`[DEBUG] Forum Notification: Recipient=${recipientId}, Email=${recipient?.email}, Prefs=${JSON.stringify(prefs)}, ShouldSend=${shouldSend}`);
+
                         // Check explicit false (default true)
-                        if (recipient?.email && prefs.forum_replies !== false) {
+                        if (shouldSend) {
                             const link = `${process.env.APP_WEB_URL || 'http://localhost:8083'}/forums/topic/${id}`;
                             const html = `
                                 <h2>${msg.title}</h2>
