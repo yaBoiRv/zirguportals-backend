@@ -239,14 +239,17 @@ module.exports = async function listingsRoutes(fastify) {
                 `INSERT INTO public.horse_listings (
                     user_id, title, description, price, currency, country, images, 
                     status, featured, age, height, video_urls, breed_id, sex_id, 
-                    visible, municipality, lat, lon, city, registration_id
+                    visible, municipality, lat, lon, city, registration_id,
+                    animal_type, pony_breed_id, custom_breed, custom_pony_breed
                 ) VALUES (
-                    $1::uuid, $2, $3, $4, $5, $6, $7, 'available', $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+                    $1::uuid, $2, $3, $4, $5, $6, $7, 'available', $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+                    $20, $21, $22, $23
                 ) RETURNING id`,
                 userId, b.name || b.title, b.description, b.price || null, b.currency || 'EUR', b.country, b.images || [],
                 b.featured || false, age, b.height || null, video_urls, b.breed_id || null, b.sex_id || null,
                 b.visible !== false, b.municipality || null, Number(b.lat || 0), Number(b.lon || 0), b.city || null,
-                b.registration_id || null
+                b.registration_id || null, b.animal_type || 'horse', b.pony_breed_id || null, b.custom_breed || null,
+                b.custom_pony_breed || null
             );
             const listingId = result[0].id;
 
@@ -309,6 +312,10 @@ module.exports = async function listingsRoutes(fastify) {
                 featured: 'featured',
                 // age, height, video_urls handled specifically below or if passed directly
                 breed_id: 'breed_id',
+                pony_breed_id: 'pony_breed_id',
+                custom_breed: 'custom_breed',
+                custom_pony_breed: 'custom_pony_breed',
+                animal_type: 'animal_type',
                 sex_id: 'sex_id',
                 visible: 'visible',
                 municipality: 'municipality',
