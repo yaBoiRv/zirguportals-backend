@@ -2,6 +2,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const crypto = require("crypto");
+const { sendEmail } = require('./services/emailService');
 
 const fastify = require("fastify")({ logger: true, trustProxy: true });
 
@@ -984,6 +985,25 @@ const start = async () => {
             sender: msg.sender,
             files: files || [], // Pass original objects for immediate display
           });
+          // Send email notification to offline/other participants
+          const participants = await prisma.conversationParticipant.findMany({
+            where: { conversationId, userId: { not: socket.user.id } },
+            include: { user: { include: { profile: true } } }
+          });
+
+          for (const p of participants) {
+            const prefs = p.user?.profile?.notificationPreferences || {};
+            // Default chat_messages to true if undefined
+            if (p.user.email && prefs.chat_messages !== false) {
+              const senderName = socket.user.email; // Or fetch profile name? Socket has limited user info.
+              // We can fetch sender profile or just use "New message".
+              sendEmail({
+                to: p.user.email,
+                subject: 'New Message on Horse Portal',
+                html: `<p>You have a new message from a user.</p><p><a href="${process.env.APP_WEB_URL}/messages">View Message</a></p>`
+              });
+            }
+          }
         } catch (e) {
           fastify.log.error(e);
           socket.emit("chat:error", { error: "send failed" });
@@ -1121,6 +1141,28 @@ const start = async () => {
             });
             const table = normalizedType === 'equipment' ? 'equipment_listings' : 'horse_listings';
             await prisma.$executeRawUnsafe(`UPDATE public.${table} SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
+
+            // Email Notification
+            try {
+              const item = await prisma[table].findUnique({ where: { id } });
+              if (item && item.user_id && item.user_id !== req.user.id) {
+                const owner = await prisma.user.findUnique({
+                  where: { id: item.user_id },
+                  include: { profile: true }
+                });
+                if (owner && owner.email) {
+                  const prefs = owner.profile?.notificationPreferences || {};
+                  if (prefs.favorites !== false) {
+                    sendEmail({
+                      to: owner.email,
+                      subject: 'Someone favorited your listing!',
+                      html: `<p>A user favorited your listing "${item.title || 'Item'}".</p><p><a href="${process.env.APP_WEB_URL}/listings/${normalizedType}/${id}">View Listing</a></p>`
+                    });
+                  }
+                }
+              }
+            } catch (err) { fastify.log.error(err); }
+
             return { favorited: true };
           }
         } else if (type === 'service') {
@@ -1143,6 +1185,28 @@ const start = async () => {
               }
             });
             await prisma.$executeRawUnsafe(`UPDATE public.services SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
+
+            // Email Notification
+            try {
+              const item = await prisma.services.findUnique({ where: { id } });
+              if (item && item.user_id && item.user_id !== req.user.id) {
+                const owner = await prisma.user.findUnique({
+                  where: { id: item.user_id },
+                  include: { profile: true }
+                });
+                if (owner && owner.email) {
+                  const prefs = owner.profile?.notificationPreferences || {};
+                  if (prefs.favorites !== false) {
+                    sendEmail({
+                      to: owner.email,
+                      subject: 'Someone favorited your service!',
+                      html: `<p>A user favorited your service "${item.full_name}".</p><p><a href="${process.env.APP_WEB_URL}/services/${id}">View Service</a></p>`
+                    });
+                  }
+                }
+              }
+            } catch (err) { fastify.log.error(err); }
+
             return { favorited: true };
           }
         } else if (type === 'trainer') {
@@ -1165,6 +1229,28 @@ const start = async () => {
               }
             });
             await prisma.$executeRawUnsafe(`UPDATE public.trainers SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
+
+            // Email Notification
+            try {
+              const item = await prisma.trainers.findUnique({ where: { id } });
+              if (item && item.user_id && item.user_id !== req.user.id) {
+                const owner = await prisma.user.findUnique({
+                  where: { id: item.user_id },
+                  include: { profile: true }
+                });
+                if (owner && owner.email) {
+                  const prefs = owner.profile?.notificationPreferences || {};
+                  if (prefs.favorites !== false) {
+                    sendEmail({
+                      to: owner.email,
+                      subject: 'Someone favorited your trainer profile!',
+                      html: `<p>A user favorited your trainer profile "${item.name}".</p><p><a href="${process.env.APP_WEB_URL}/trainers/${id}">View Profile</a></p>`
+                    });
+                  }
+                }
+              }
+            } catch (err) { fastify.log.error(err); }
+
             return { favorited: true };
           }
         }
