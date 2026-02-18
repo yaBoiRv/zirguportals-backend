@@ -9,6 +9,9 @@ module.exports = async function listingsRoutes(fastify) {
     const prisma = fastify.prisma;
     if (!prisma) throw new Error('fastify.prisma is not available');
 
+    const { sendEmail } = require('../services/emailService');
+    const { getTranslation } = require('../config/emailTranslations');
+
     async function requireAuth(req, reply) {
         try {
             const auth = req.headers.authorization || '';
@@ -268,6 +271,47 @@ module.exports = async function listingsRoutes(fastify) {
                     await prisma.$queryRawUnsafe(`INSERT INTO public.horse_listing_temperaments (listing_id, temperament_id) VALUES ($1::uuid, $2)`, listingId, tid);
                 }
             }
+
+            // Broadcast Email for New Listing
+            try {
+                // Fetch users who want new listings (default true)
+                const recipients = await prisma.$queryRawUnsafe(`
+                    SELECT u.id, u.email, p.default_language as lang
+                    FROM users u
+                    JOIN "Profile" p ON u.id = p."user_id"
+                    WHERE (p.notification_preferences->>'new_listings' = 'true' 
+                        OR p.notification_preferences->>'new_listings' IS NULL)
+                `);
+
+                const title = b.name || b.title || 'New Horse Listing';
+
+                for (const r of recipients) {
+                    if (r.id !== userId && r.email) {
+                        const lang = r.lang || 'en';
+                        const subjectFn = getTranslation(lang, 'new_listing_subject');
+                        const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
+
+                        const bodyFn = getTranslation(lang, 'new_listing_body');
+                        const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
+
+                        const priceLabel = getTranslation(lang, 'price');
+                        const viewListing = getTranslation(lang, 'view_listing');
+                        const listingUrl = `${process.env.APP_WEB_URL}/${lang}/listings/horses/${listingId}`;
+
+                        sendEmail({
+                            to: r.email,
+                            subject: subject,
+                            html: `<p>${body}</p>
+                                    <p>${b.description ? b.description.substring(0, 100) + '...' : ''}</p>
+                                    <p>${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>
+                                    <p><a href="${listingUrl}">${viewListing}</a></p>`
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Error sending new listing emails:', e);
+            }
+
             return reply.code(201).send({ id: listingId });
         } catch (e) {
             console.error('Create horse error:', e);

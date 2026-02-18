@@ -3,6 +3,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const crypto = require("crypto");
 const { sendEmail } = require('./services/emailService');
+const { getTranslation } = require('./config/emailTranslations');
 
 const fastify = require("fastify")({ logger: true, trustProxy: true });
 
@@ -993,14 +994,17 @@ const start = async () => {
 
           for (const p of participants) {
             const prefs = p.user?.profile?.notificationPreferences || {};
+            const lang = p.user?.profile?.defaultLanguage || 'en';
             // Default chat_messages to true if undefined
             if (p.user.email && prefs.chat_messages !== false) {
-              const senderName = socket.user.email; // Or fetch profile name? Socket has limited user info.
-              // We can fetch sender profile or just use "New message".
+              const subject = getTranslation(lang, 'chat_subject');
+              const body = getTranslation(lang, 'chat_body');
+              const linkText = getTranslation(lang, 'view_message');
+
               sendEmail({
                 to: p.user.email,
-                subject: 'New Message on Horse Portal',
-                html: `<p>You have a new message from a user.</p><p><a href="${process.env.APP_WEB_URL}/messages">View Message</a></p>`
+                subject: subject,
+                html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/messages">${linkText}</a></p>`
               });
             }
           }
@@ -1152,11 +1156,18 @@ const start = async () => {
                 });
                 if (owner && owner.email) {
                   const prefs = owner.profile?.notificationPreferences || {};
+                  const lang = owner.profile?.defaultLanguage || 'en';
+
                   if (prefs.favorites !== false) {
+                    const subject = getTranslation(lang, 'favorite_listing_subject');
+                    const bodyFn = getTranslation(lang, 'favorite_listing_body');
+                    const body = typeof bodyFn === 'function' ? bodyFn(item.title || 'Item') : bodyFn;
+                    const linkText = getTranslation(lang, 'view_listing');
+
                     sendEmail({
                       to: owner.email,
-                      subject: 'Someone favorited your listing!',
-                      html: `<p>A user favorited your listing "${item.title || 'Item'}".</p><p><a href="${process.env.APP_WEB_URL}/listings/${normalizedType}/${id}">View Listing</a></p>`
+                      subject: subject,
+                      html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/listings/${normalizedType}/${id}">${linkText}</a></p>`
                     });
                   }
                 }
@@ -1196,11 +1207,18 @@ const start = async () => {
                 });
                 if (owner && owner.email) {
                   const prefs = owner.profile?.notificationPreferences || {};
+                  const lang = owner.profile?.defaultLanguage || 'en';
+
                   if (prefs.favorites !== false) {
+                    const subject = getTranslation(lang, 'favorite_service_subject');
+                    const bodyFn = getTranslation(lang, 'favorite_service_body');
+                    const body = typeof bodyFn === 'function' ? bodyFn(item.full_name) : bodyFn;
+                    const linkText = getTranslation(lang, 'view_service');
+
                     sendEmail({
                       to: owner.email,
-                      subject: 'Someone favorited your service!',
-                      html: `<p>A user favorited your service "${item.full_name}".</p><p><a href="${process.env.APP_WEB_URL}/services/${id}">View Service</a></p>`
+                      subject: subject,
+                      html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/services/${id}">${linkText}</a></p>`
                     });
                   }
                 }
@@ -1240,11 +1258,18 @@ const start = async () => {
                 });
                 if (owner && owner.email) {
                   const prefs = owner.profile?.notificationPreferences || {};
+                  const lang = owner.profile?.defaultLanguage || 'en';
+
                   if (prefs.favorites !== false) {
+                    const subject = getTranslation(lang, 'favorite_trainer_subject');
+                    const bodyFn = getTranslation(lang, 'favorite_trainer_body');
+                    const body = typeof bodyFn === 'function' ? bodyFn(item.name) : bodyFn;
+                    const linkText = getTranslation(lang, 'view_profile');
+
                     sendEmail({
                       to: owner.email,
-                      subject: 'Someone favorited your trainer profile!',
-                      html: `<p>A user favorited your trainer profile "${item.name}".</p><p><a href="${process.env.APP_WEB_URL}/trainers/${id}">View Profile</a></p>`
+                      subject: subject,
+                      html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/trainers/${id}">${linkText}</a></p>`
                     });
                   }
                 }

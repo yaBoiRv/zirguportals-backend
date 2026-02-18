@@ -1,5 +1,6 @@
 'use strict';
 const { sendEmail } = require('../services/emailService');
+const { getTranslation } = require('../config/emailTranslations');
 
 module.exports = async function forumRoutes(fastify) {
     const prisma = fastify.prisma;
@@ -370,32 +371,36 @@ module.exports = async function forumRoutes(fastify) {
                             where: { id: recipientId },
                             select: {
                                 email: true,
-                                profile: { select: { notificationPreferences: true } }
+                                profile: { select: { notificationPreferences: true, defaultLanguage: true } }
                             }
                         });
 
                         const prefs = recipient?.profile?.notificationPreferences || {};
+                        const lang = recipient?.profile?.defaultLanguage || 'en';
                         const shouldSend = recipient?.email && prefs.forum_replies !== false;
-
-                        console.log(`[DEBUG] Forum Notification: Recipient=${recipientId}, Email=${recipient?.email}, Prefs=${JSON.stringify(prefs)}, ShouldSend=${shouldSend}`);
 
                         // Check explicit false (default true)
                         if (shouldSend) {
-                            const link = `${process.env.APP_WEB_URL || 'http://localhost:8083'}/forums/topic/${id}`;
+                            const linkText = getTranslation(lang, 'view_topic');
+                            const link = `${process.env.APP_WEB_URL}/${lang}/forums/topic/${id}`;
+                            const replierName = req.user?.email?.split('@')[0] || 'User'; // Or req.user.profile.name if available
+
+                            // Determine if reply to topic or comment. 
+                            // msg.type might help if available, but here we assume general reply.
+                            // We use generic reply msg.
+                            const subject = getTranslation(lang, 'forum_reply_subject');
+                            const bodyFn = getTranslation(lang, 'forum_reply_body');
+                            const bodyContent = typeof bodyFn === 'function' ? bodyFn(replierName, topic.title) : bodyFn;
+
                             const html = `
-                                <h2>${msg.title}</h2>
-                                <p>${msg.content}</p>
-                                <p><a href="${link}">View Reply</a></p>
+                                <h2>${subject}</h2>
+                                <p>${bodyContent}</p>
+                                <p><a href="${link}">${linkText}</a></p>
                                 <hr/>
                                 <small>You can change your notification preferences in your profile settings.</small>
                             `;
-                            // Don't await email sending to keep response fast? Or lightweight await?
-                            // sendEmail is async but returns promise. User didn't ask for background job.
-                            // I'll execute it without await to not block? 
-                            // But usually await is safer to catch errors immediately if critical. 
-                            // Notifications are usually async.
-                            // I'll catch errors inside loop so it doesn't break response.
-                            sendEmail({ to: recipient.email, subject: msg.title, html }).catch(console.error);
+
+                            sendEmail({ to: recipient.email, subject: subject, html }).catch(console.error);
                         }
                     } catch (emailErr) {
                         console.error('Failed to process email notification:', emailErr);

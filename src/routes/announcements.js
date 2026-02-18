@@ -2,6 +2,8 @@
 
 module.exports = async function announcementsRoutes(fastify) {
     const prisma = fastify.prisma;
+    const { sendEmail } = require('../services/emailService');
+    const { getTranslation } = require('../config/emailTranslations');
 
     async function requireAuth(req, reply) {
         try {
@@ -120,13 +122,20 @@ module.exports = async function announcementsRoutes(fastify) {
 
             // Broadcast Notification to all users
             try {
-                const allUsers = await prisma.user.findMany({ select: { id: true } });
+                const allUsers = await prisma.user.findMany({
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: { select: { notificationPreferences: true, defaultLanguage: true } }
+                    }
+                });
+
                 const notifications = allUsers
                     .filter(u => u.id !== req.user.id)
                     .map(u => ({
                         user_id: u.id,
                         type: 'new_announcement',
-                        title: 'New Announcement',
+                        title: 'New Announcement', // In-app notification stays default/en for now
                         content: title,
                         source_type: 'announcement',
                         source_id: announcement.id,
@@ -138,6 +147,24 @@ module.exports = async function announcementsRoutes(fastify) {
                     await prisma.notifications.createMany({
                         data: notifications
                     });
+                }
+
+                // Send Emails
+                for (const u of allUsers) {
+                    if (u.id === req.user.id) continue;
+                    const prefs = u.profile?.notificationPreferences || {};
+                    const lang = u.profile?.defaultLanguage || 'en';
+
+                    if (u.email && prefs.new_announcements_email !== false) {
+                        const subject = getTranslation(lang, 'new_announcement_subject') + ' ' + title;
+                        const readMore = getTranslation(lang, 'read_more');
+
+                        sendEmail({
+                            to: u.email,
+                            subject: subject,
+                            html: `<h1>${title}</h1><p>${content.substring(0, 200)}...</p><p><a href="${process.env.APP_WEB_URL}/announcements">${readMore}</a></p>`
+                        });
+                    }
                 }
             } catch (err) {
                 console.error('Error broadcasting announcement notification:', err);
