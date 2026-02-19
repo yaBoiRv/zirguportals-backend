@@ -24,10 +24,15 @@ const translations = {
 
         new_listing_subject: (title) => `New Listing: ${title}`,
         new_listing_body: (title) => `A new horse listing has been posted: <strong>${title}</strong>`,
+        new_equipment_body: (title) => `A new equipment listing has been posted: <strong>${title}</strong>`,
         price: "Price",
 
         new_announcement_subject: (title) => `New Announcement: ${title}`,
-        read_more: "Read more"
+        read_more: "Read more",
+        new_service_subject: (title) => `New Service: ${title}`,
+        new_service_body: (title) => `A new service listing has been posted: <strong>${title}</strong>`,
+        new_trainer_subject: (title) => `New Trainer Profile: ${title}`,
+        new_trainer_body: (title) => `A new trainer profile has been created: <strong>${title}</strong>`
     },
     lv: {
         forum_reply_subject: "Jauna atbilde jūsu tēmā",
@@ -54,10 +59,15 @@ const translations = {
 
         new_listing_subject: (title) => `Jauns sludinājums: ${title}`,
         new_listing_body: (title) => `Pievienots jauns zirga sludinājums: <strong>${title}</strong>`,
+        new_equipment_body: (title) => `Pievienots jauns ekipējuma sludinājums: <strong>${title}</strong>`,
         price: "Cena",
 
         new_announcement_subject: (title) => `Jauns paziņojums: ${title}`,
-        read_more: "Lasīt vairāk"
+        read_more: "Lasīt vairāk",
+        new_service_subject: (title) => `Jauns pakalpojums: ${title}`,
+        new_service_body: (title) => `Pievienots jauns pakalpojums: <strong>${title}</strong>`,
+        new_trainer_subject: (title) => `Jauns treneris: ${title}`,
+        new_trainer_body: (title) => `Izveidots jauns trenera profils: <strong>${title}</strong>`
     },
     ru: {
         forum_reply_subject: "Новый ответ в вашей теме",
@@ -84,10 +94,15 @@ const translations = {
 
         new_listing_subject: (title) => `Новое объявление: ${title}`,
         new_listing_body: (title) => `Опубликовано новое объявление о продаже лошади: <strong>${title}</strong>`,
+        new_equipment_body: (title) => `Опубликовано новое объявление (экипировка): <strong>${title}</strong>`,
         price: "Цена",
 
         new_announcement_subject: (title) => `Новое уведомление: ${title}`, // Added hint to distinguish
-        read_more: "Читать далее"
+        read_more: "Читать далее",
+        new_service_subject: (title) => `Новая услуга: ${title}`,
+        new_service_body: (title) => `Добавлена новая услуга: <strong>${title}</strong>`,
+        new_trainer_subject: (title) => `Новый тренер: ${title}`,
+        new_trainer_body: (title) => `Создан новый профиль тренера: <strong>${title}</strong>`
     },
     ee: {
         forum_reply_subject: "Uus vastus teie teemale",
@@ -114,10 +129,15 @@ const translations = {
 
         new_listing_subject: (title) => `Uus kuulutus: ${title}`,
         new_listing_body: (title) => `Lisatud uus hobuse müügikuulutus: <strong>${title}</strong>`,
+        new_equipment_body: (title) => `Lisati uus varustuse kuulutus: <strong>${title}</strong>`,
         price: "Hind",
 
         new_announcement_subject: (title) => `Uus teadaanne: ${title}`,
-        read_more: "Loe edasi"
+        read_more: "Loe edasi",
+        new_service_subject: (title) => `Uus teenus: ${title}`,
+        new_service_body: (title) => `Lisati uus teenus: <strong>${title}</strong>`,
+        new_trainer_subject: (title) => `Uus treener: ${title}`,
+        new_trainer_body: (title) => `Loodi uus treeneri profiil: <strong>${title}</strong>`
     },
     lt: {
         forum_reply_subject: "Naujas atsakymas jūsų temoje",
@@ -144,10 +164,15 @@ const translations = {
 
         new_listing_subject: (title) => `Naujas skelbimas: ${title}`,
         new_listing_body: (title) => `Įkeltas naujas žirgo pardavimo skelbimas: <strong>${title}</strong>`,
+        new_equipment_body: (title) => `Įdėtas naujas įrangos skelbimas: <strong>${title}</strong>`,
         price: "Kaina",
 
         new_announcement_subject: (title) => `Naujas pranešimas: ${title}`,
-        read_more: "Skaityti daugiau"
+        read_more: "Skaityti daugiau",
+        new_service_subject: (title) => `Nauja paslauga: ${title}`,
+        new_service_body: (title) => `Įdėta nauja paslauga: <strong>${title}</strong>`,
+        new_trainer_subject: (title) => `Naujas treneris: ${title}`,
+        new_trainer_body: (title) => `Sukurtas naujas trenerio profilis: <strong>${title}</strong>`
     }
 };
 

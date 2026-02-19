@@ -275,19 +275,17 @@ module.exports = async function listingsRoutes(fastify) {
             // Broadcast Email for New Listing
             try {
                 // Fetch users who want new listings (default true)
-                const recipients = await prisma.$queryRawUnsafe(`
-                    SELECT u.id, u.email, p.default_language as lang
-                    FROM users u
-                    JOIN "Profile" p ON u.id = p."user_id"
-                    WHERE (p.notification_preferences->>'new_listings' = 'true' 
-                        OR p.notification_preferences->>'new_listings' IS NULL)
-                `);
+                const allUsers = await prisma.user.findMany({
+                    where: { id: { not: userId } },
+                    include: { profile: { select: { defaultLanguage: true, notificationPreferences: true } } }
+                });
 
                 const title = b.name || b.title || 'New Horse Listing';
 
-                for (const r of recipients) {
-                    if (r.id !== userId && r.email) {
-                        const lang = r.lang || 'en';
+                for (const r of allUsers) {
+                    const prefs = r.profile?.notificationPreferences || {};
+                    if (r.email && prefs.new_listings !== false) {
+                        const lang = r.profile?.defaultLanguage || 'en';
                         const subjectFn = getTranslation(lang, 'new_listing_subject');
                         const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
 
@@ -640,6 +638,43 @@ module.exports = async function listingsRoutes(fastify) {
                     await prisma.$queryRawUnsafe(`INSERT INTO public.equipment_listing_colors (listing_id, color_id) VALUES ($1::uuid, $2)`, listingId, cid);
                 }
             }
+            // Broadcast Email for New Equipment Listing
+            try {
+                const allUsers = await prisma.user.findMany({
+                    where: { id: { not: userId } },
+                    include: { profile: { select: { defaultLanguage: true, notificationPreferences: true } } }
+                });
+
+                const title = b.title || 'New Equipment Listing';
+
+                for (const r of allUsers) {
+                    const prefs = r.profile?.notificationPreferences || {};
+                    if (r.email && prefs.new_listings !== false) {
+                        const lang = r.profile?.defaultLanguage || 'en';
+                        const subjectFn = getTranslation(lang, 'new_listing_subject');
+                        const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
+
+                        const bodyFn = getTranslation(lang, 'new_equipment_body');
+                        const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
+
+                        const priceLabel = getTranslation(lang, 'price');
+                        const viewListing = getTranslation(lang, 'view_listing');
+                        const listingUrl = `${process.env.APP_WEB_URL}/${lang}/equipment/${listingId}`;
+
+                        sendEmail({
+                            to: r.email,
+                            subject: subject,
+                            html: `<p>${body}</p>
+                                    <p>${b.description ? b.description.substring(0, 100) + '...' : ''}</p>
+                                    <p>${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>
+                                    <p><a href="${listingUrl}">${viewListing}</a></p>`
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Error sending new equipment listing emails:', e);
+            }
+
             return reply.code(201).send({ id: listingId });
         } catch (e) {
             return reply.code(500).send({ error: 'Failed to create listing' });

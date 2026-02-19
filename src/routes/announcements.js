@@ -156,7 +156,8 @@ module.exports = async function announcementsRoutes(fastify) {
                     const lang = u.profile?.defaultLanguage || 'en';
 
                     if (u.email && prefs.new_announcements_email !== false) {
-                        const subject = getTranslation(lang, 'new_announcement_subject') + ' ' + title;
+                        const subjectFn = getTranslation(lang, 'new_announcement_subject');
+                        const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
                         const readMore = getTranslation(lang, 'read_more');
 
                         sendEmail({

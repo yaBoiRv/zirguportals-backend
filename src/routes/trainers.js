@@ -3,6 +3,8 @@
 
 module.exports = async function trainersRoutes(fastify) {
     const prisma = fastify.prisma;
+    const { sendEmail } = require('../services/emailService');
+    const { getTranslation } = require('../config/emailTranslations');
 
     // Middleware to require auth
     async function requireAuth(req, reply) {
@@ -144,6 +146,43 @@ module.exports = async function trainersRoutes(fastify) {
 
             // Update profile to set has_trainer_profile = true
             await prisma.$queryRawUnsafe(`UPDATE public.profiles SET has_trainer_profile = true WHERE user_id = $1::uuid`, userId);
+
+            // Broadcast Email for New Trainer
+            try {
+                const allUsers = await prisma.user.findMany({
+                    where: { id: { not: userId } },
+                    include: { profile: { select: { defaultLanguage: true, notificationPreferences: true } } }
+                });
+
+                const title = b.name || 'New Trainer';
+                const trainerId = result[0].id;
+
+                for (const r of allUsers) {
+                    const prefs = r.profile?.notificationPreferences || {};
+                    if (r.email && prefs.new_listings !== false) {
+                        const lang = r.profile?.defaultLanguage || 'en';
+                        const subjectFn = getTranslation(lang, 'new_trainer_subject');
+                        const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
+
+                        const bodyFn = getTranslation(lang, 'new_trainer_body');
+                        const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
+
+                        const viewProfile = getTranslation(lang, 'view_profile');
+                        const trainerUrl = `${process.env.APP_WEB_URL}/${lang}/trainers/${trainerId}`;
+
+                        sendEmail({
+                            to: r.email,
+                            subject: subject,
+                            html: `<p>${body}</p>
+                                    <p>${b.bio ? b.bio.substring(0, 100) + '...' : ''}</p>
+                                    <p>${b.hourly_rate ? b.hourly_rate + ' EUR/hr' : ''}</p>
+                                    <p><a href="${trainerUrl}">${viewProfile}</a></p>`
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Error sending new trainer emails:', e);
+            }
 
             return reply.code(201).send(result[0]);
         } catch (e) {

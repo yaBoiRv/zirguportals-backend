@@ -2,6 +2,8 @@
 
 module.exports = async function servicesRoutes(fastify) {
     const prisma = fastify.prisma;
+    const { sendEmail } = require('../services/emailService');
+    const { getTranslation } = require('../config/emailTranslations');
 
     // Middleware to require auth
     async function requireAuth(req, reply) {
@@ -115,6 +117,43 @@ module.exports = async function servicesRoutes(fastify) {
                 b.pricing_type || 'not_specified',
                 b.custom_specialty || null
             );
+            // Broadcast Email for New Service
+            try {
+                const allUsers = await prisma.user.findMany({
+                    where: { id: { not: userId } },
+                    include: { profile: { select: { defaultLanguage: true, notificationPreferences: true } } }
+                });
+
+                const title = b.full_name || 'New Service';
+                const serviceId = result[0].id;
+
+                for (const r of allUsers) {
+                    const prefs = r.profile?.notificationPreferences || {};
+                    if (r.email && prefs.new_listings !== false) {
+                        const lang = r.profile?.defaultLanguage || 'en';
+                        const subjectFn = getTranslation(lang, 'new_service_subject');
+                        const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
+
+                        const bodyFn = getTranslation(lang, 'new_service_body');
+                        const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
+
+                        const viewService = getTranslation(lang, 'view_service');
+                        const serviceUrl = `${process.env.APP_WEB_URL}/${lang}/services/${serviceId}`;
+
+                        sendEmail({
+                            to: r.email,
+                            subject: subject,
+                            html: `<p>${body}</p>
+                                    <p>${b.bio ? b.bio.substring(0, 100) + '...' : ''}</p>
+                                    <p>${b.hourly_rate ? b.hourly_rate + ' EUR/hr' : ''}</p>
+                                    <p><a href="${serviceUrl}">${viewService}</a></p>`
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Error sending new service emails:', e);
+            }
+
             return reply.code(201).send(result[0]);
         } catch (e) {
             console.error('Create service error:', e);
