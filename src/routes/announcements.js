@@ -122,24 +122,26 @@ module.exports = async function announcementsRoutes(fastify) {
 
             // Broadcast Notification to all users
             try {
+                console.log('[AnnouncementDebug] Broadcasting announcement');
                 const allUsers = await prisma.user.findMany({
+                    where: { id: { not: req.user.id } },
                     select: {
                         id: true,
                         email: true,
                         profile: { select: { notificationPreferences: true, defaultLanguage: true } }
                     }
                 });
+                console.log(`[AnnouncementDebug] Found ${allUsers.length} total users to check`);
 
                 const notifications = allUsers
-                    .filter(u => u.id !== req.user.id)
                     .map(u => ({
                         user_id: u.id,
                         type: 'new_announcement',
-                        title: 'New Announcement', // In-app notification stays default/en for now
+                        title: 'New Announcement',
                         content: title,
                         source_type: 'announcement',
                         source_id: announcement.id,
-                        source_user_id: req.user.id,
+                        source_user_id: req.user.id, // Ensure this field matches schema logic if necessary
                         metadata: {}
                     }));
 
@@ -151,7 +153,6 @@ module.exports = async function announcementsRoutes(fastify) {
 
                 // Send Emails
                 for (const u of allUsers) {
-                    if (u.id === req.user.id) continue;
                     const prefs = u.profile?.notificationPreferences || {};
                     const lang = u.profile?.defaultLanguage || 'en';
 

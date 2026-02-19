@@ -274,17 +274,21 @@ module.exports = async function listingsRoutes(fastify) {
 
             // Broadcast Email for New Listing
             try {
+                console.log('[ListingDebug] Broadcasting email for new HORSE listing');
                 // Fetch users who want new listings (default true)
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: userId } },
                     include: { profile: { select: { defaultLanguage: true, notificationPreferences: true } } }
                 });
+                console.log(`[ListingDebug] Found ${allUsers.length} potential recipients`);
 
                 const title = b.name || b.title || 'New Horse Listing';
 
                 for (const r of allUsers) {
                     const prefs = r.profile?.notificationPreferences || {};
+                    // console.log(`[ListingDebug] Checking user ${r.email}: new_listings=${prefs.new_listings}`);
                     if (r.email && prefs.new_listings !== false) {
+                        // console.log(`[ListingDebug] Sending to ${r.email}`);
                         const lang = r.profile?.defaultLanguage || 'en';
                         const subjectFn = getTranslation(lang, 'new_listing_subject');
                         const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
@@ -640,10 +644,12 @@ module.exports = async function listingsRoutes(fastify) {
             }
             // Broadcast Email for New Equipment Listing
             try {
+                console.log('[ListingDebug] Broadcasting email for new EQUIPMENT listing');
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: userId } },
                     include: { profile: { select: { defaultLanguage: true, notificationPreferences: true } } }
                 });
+                console.log(`[ListingDebug] Found ${allUsers.length} potential recipients`);
 
                 const title = b.title || 'New Equipment Listing';
 

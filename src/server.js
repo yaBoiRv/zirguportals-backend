@@ -987,16 +987,20 @@ const start = async () => {
             files: files || [], // Pass original objects for immediate display
           });
           // Send email notification to offline/other participants
+          console.log(`[ChatDebug] Sending email to offline/other participants for conversation ${conversationId}`);
           const participants = await prisma.conversationParticipant.findMany({
             where: { conversationId, userId: { not: socket.user.id } },
             include: { user: { include: { profile: true } } }
           });
+          console.log(`[ChatDebug] Found ${participants.length} other participants.`);
 
           for (const p of participants) {
             const prefs = p.user?.profile?.notificationPreferences || {};
             const lang = p.user?.profile?.defaultLanguage || 'en';
             // Default chat_messages to true if undefined
+            console.log(`[ChatDebug] Processing participant ${p.user.id} (${p.user.email}). Prefs: chat_messages=${prefs.chat_messages}`);
             if (p.user.email && prefs.chat_messages !== false) {
+              console.log(`[ChatDebug] Sending email to ${p.user.email}`);
               const subject = getTranslation(lang, 'chat_subject');
               const body = getTranslation(lang, 'chat_body');
               const linkText = getTranslation(lang, 'view_message');
@@ -1006,6 +1010,8 @@ const start = async () => {
                 subject: subject,
                 html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/messages">${linkText}</a></p>`
               });
+            } else {
+              console.log(`[ChatDebug] Skipped ${p.user.email}: prefs check failed`);
             }
           }
         } catch (e) {
