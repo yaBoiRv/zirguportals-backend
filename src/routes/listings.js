@@ -296,7 +296,7 @@ module.exports = async function listingsRoutes(fastify) {
 
                         const priceLabel = getTranslation(lang, 'price');
                         const viewListing = getTranslation(lang, 'view_listing');
-                        const listingUrl = `${process.env.APP_WEB_URL}/${lang}/listings/horses/${listingId}`;
+                        const listingUrl = `${process.env.APP_WEB_URL}/${lang}/horses/${listingId}`;
 
                         sendEmail({
                             to: r.email,

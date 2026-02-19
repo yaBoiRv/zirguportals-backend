@@ -1167,7 +1167,7 @@ const start = async () => {
                     sendEmail({
                       to: owner.email,
                       subject: subject,
-                      html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/listings/${normalizedType}/${id}">${linkText}</a></p>`
+                      html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/${normalizedType === 'equipment' ? 'equipment' : 'horses'}/${id}">${linkText}</a></p>`
                     });
                   }
                 }

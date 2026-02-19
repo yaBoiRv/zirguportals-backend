@@ -382,7 +382,7 @@ module.exports = async function forumRoutes(fastify) {
                         // Check explicit false (default true)
                         if (shouldSend) {
                             const linkText = getTranslation(lang, 'view_topic');
-                            const link = `${process.env.APP_WEB_URL}/${lang}/forums/topic/${id}`;
+                            const link = `${process.env.APP_WEB_URL}/${lang}/forums/${id}`;
                             const replierName = req.user?.email?.split('@')[0] || 'User'; // Or req.user.profile.name if available
 
                             // Determine if reply to topic or comment. 
