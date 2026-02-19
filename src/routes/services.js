@@ -142,7 +142,7 @@ module.exports = async function servicesRoutes(fastify) {
                         const viewService = getTranslation(lang, 'view_service');
                         const serviceUrl = `${process.env.APP_WEB_URL}/${lang}/services/${serviceId}`;
 
-                        sendEmail({
+                        await sendEmail({
                             to: r.email,
                             subject: subject,
                             html: `<p>${body}</p>

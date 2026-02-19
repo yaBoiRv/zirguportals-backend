@@ -1005,7 +1005,7 @@ const start = async () => {
               const body = getTranslation(lang, 'chat_body');
               const linkText = getTranslation(lang, 'view_message');
 
-              sendEmail({
+              await sendEmail({
                 to: p.user.email,
                 subject: subject,
                 html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/messages">${linkText}</a></p>`

@@ -161,7 +161,7 @@ module.exports = async function announcementsRoutes(fastify) {
                         const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
                         const readMore = getTranslation(lang, 'read_more');
 
-                        sendEmail({
+                        await sendEmail({
                             to: u.email,
                             subject: subject,
                             html: `<h1>${title}</h1><p>${content.substring(0, 200)}...</p><p><a href="${process.env.APP_WEB_URL}/${lang}/announcements">${readMore}</a></p>`

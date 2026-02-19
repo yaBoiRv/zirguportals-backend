@@ -172,7 +172,7 @@ module.exports = async function trainersRoutes(fastify) {
                         const viewProfile = getTranslation(lang, 'view_profile');
                         const trainerUrl = `${process.env.APP_WEB_URL}/${lang}/trainers/${trainerId}`;
 
-                        sendEmail({
+                        await sendEmail({
                             to: r.email,
                             subject: subject,
                             html: `<p>${body}</p>
