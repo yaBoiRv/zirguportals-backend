@@ -86,14 +86,76 @@ const translations = {
         new_listing_body: (title) => `Опубликовано новое объявление о продаже лошади: <strong>${title}</strong>`,
         price: "Цена",
 
-        new_announcement_subject: (title) => `Новое объявление: ${title}`,
+        new_announcement_subject: (title) => `Новое уведомление: ${title}`, // Added hint to distinguish
         read_more: "Читать далее"
+    },
+    ee: {
+        forum_reply_subject: "Uus vastus teie teemale",
+        forum_reply_body: (replierName, topicTitle) => `${replierName} vastas teemale "${topicTitle}"`,
+        forum_reply_comment_subject: "Uus vastus teie kommentaarile",
+        forum_reply_comment_body: (replierName, topicTitle) => `${replierName} vastas teie kommentaarile teemas "${topicTitle}"`,
+        view_topic: "Vaata teemat",
+
+        chat_subject: "Uus sõnum Horse Portal'is",
+        chat_body: "Teil on uus sõnum kasutajalt.",
+        view_message: "Vaata sõnumit",
+
+        favorite_listing_subject: "Keegi lisas teie kuulutuse lemmikutesse!",
+        favorite_listing_body: (title) => `Kasutaja lisas teie kuulutuse "${title}" lemmikutesse.`,
+        view_listing: "Vaata kuulutust",
+
+        favorite_service_subject: "Keegi lisas teie teenuse lemmikutesse!",
+        favorite_service_body: (name) => `Kasutaja lisas teie teenuse "${name}" lemmikutesse.`,
+        view_service: "Vaata teenust",
+
+        favorite_trainer_subject: "Keegi lisas teie treeneriprofiili lemmikutesse!",
+        favorite_trainer_body: (name) => `Kasutaja lisas teie treeneriprofiili "${name}" lemmikutesse.`,
+        view_profile: "Vaata profiili",
+
+        new_listing_subject: (title) => `Uus kuulutus: ${title}`,
+        new_listing_body: (title) => `Lisatud uus hobuse müügikuulutus: <strong>${title}</strong>`,
+        price: "Hind",
+
+        new_announcement_subject: (title) => `Uus teadaanne: ${title}`,
+        read_more: "Loe edasi"
+    },
+    lt: {
+        forum_reply_subject: "Naujas atsakymas jūsų temoje",
+        forum_reply_body: (replierName, topicTitle) => `${replierName} atsakė į "${topicTitle}"`,
+        forum_reply_comment_subject: "Naujas atsakymas į jūsų komentarą",
+        forum_reply_comment_body: (replierName, topicTitle) => `${replierName} atsakė į jūsų komentarą temoje "${topicTitle}"`,
+        view_topic: "Peržiūrėti temą",
+
+        chat_subject: "Nauja žinutė Horse Portal",
+        chat_body: "Gavote naują žinutę iš vartotojo.",
+        view_message: "Peržiūrėti žinutę",
+
+        favorite_listing_subject: "Kažkas pamėgo jūsų skelbimą!",
+        favorite_listing_body: (title) => `Vartotojas pamėgo jūsų skelbimą "${title}".`,
+        view_listing: "Peržiūrėti skelbimą",
+
+        favorite_service_subject: "Kažkas pamėgo jūsų paslaugą!",
+        favorite_service_body: (name) => `Vartotojas pamėgo jūsų paslaugą "${name}".`,
+        view_service: "Peržiūrėti paslaugą",
+
+        favorite_trainer_subject: "Kažkas pamėgo jūsų trenerio profilį!",
+        favorite_trainer_body: (name) => `Vartotojas pamėgo jūsų trenerio profilį "${name}".`,
+        view_profile: "Peržiūrėti profilį",
+
+        new_listing_subject: (title) => `Naujas skelbimas: ${title}`,
+        new_listing_body: (title) => `Įkeltas naujas žirgo pardavimo skelbimas: <strong>${title}</strong>`,
+        price: "Kaina",
+
+        new_announcement_subject: (title) => `Naujas pranešimas: ${title}`,
+        read_more: "Skaityti daugiau"
     }
 };
 
 module.exports = {
     getTranslation: (lang, key) => {
+        // Fallback to 'en' if language not found
         const l = translations[lang] || translations['en'];
-        return l[key] || translations['en'][key];
+        // Fallback to 'en' key if key not found in language
+        return l[key] || translations['en'][key] || key;
     }
 };
