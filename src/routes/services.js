@@ -166,6 +166,7 @@ module.exports = async function servicesRoutes(fastify) {
                                     <p>${b.hourly_rate ? b.hourly_rate + ' EUR/hr' : ''}</p>
                                     <p><a href="${serviceUrl}">${viewService}</a></p>`
                         });
+                        await new Promise(r => setTimeout(r, 600));
                     }
                 }
             } catch (e) {

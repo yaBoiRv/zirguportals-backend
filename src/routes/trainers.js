@@ -196,6 +196,7 @@ module.exports = async function trainersRoutes(fastify) {
                                     <p>${b.hourly_rate ? b.hourly_rate + ' EUR/hr' : ''}</p>
                                     <p><a href="${trainerUrl}">${viewProfile}</a></p>`
                         });
+                        await new Promise(r => setTimeout(r, 600));
                     }
                 }
             } catch (e) {

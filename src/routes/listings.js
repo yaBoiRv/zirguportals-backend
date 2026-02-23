@@ -322,6 +322,7 @@ module.exports = async function listingsRoutes(fastify) {
                                     <p>${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>
                                     <p><a href="${listingUrl}">${viewListing}</a></p>`
                         });
+                        await new Promise(r => setTimeout(r, 600));
                     }
                 }
             } catch (e) {
@@ -705,6 +706,7 @@ module.exports = async function listingsRoutes(fastify) {
                                     <p>${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>
                                     <p><a href="${listingUrl}">${viewListing}</a></p>`
                         });
+                        await new Promise(r => setTimeout(r, 600));
                     }
                 }
             } catch (e) {

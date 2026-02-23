@@ -166,6 +166,8 @@ module.exports = async function announcementsRoutes(fastify) {
                                 html: `<h1>${title}</h1><p>${content.substring(0, 200)}...</p><p><a href="${process.env.APP_WEB_URL}/${lang}/announcements">${readMore}</a></p>`
                             });
                             console.log(`[AnnouncementEmail] Sent successfully to ${u.email}`);
+                            // Prevent Resend rate limits (max 2 per sec)
+                            await new Promise(r => setTimeout(r, 600));
                         } else {
                             console.log(`[AnnouncementEmail] Skipped ${u.email}: No email or pref is false`);
                         }
