@@ -162,7 +162,10 @@ module.exports = async function trainersRoutes(fastify) {
                 (async () => {
                     for (const r of allUsers) {
                         const prefs = r.profile?.notificationPreferences || {};
-                        if (r.email && prefs.new_listings !== false) {
+                        const pushEnabled = prefs.new_listings_push ?? prefs.new_listings ?? true;
+                        const emailEnabled = prefs.new_listings_email ?? prefs.new_listings ?? true;
+
+                        if (pushEnabled !== false) {
                             try {
                                 await prisma.notifications.create({
                                     data: {
@@ -178,7 +181,9 @@ module.exports = async function trainersRoutes(fastify) {
                             } catch (e) {
                                 console.error('Failed to create notification', e);
                             }
+                        }
 
+                        if (r.email && emailEnabled !== false) {
                             const lang = r.profile?.defaultLanguage || 'en';
                             const subjectFn = getTranslation(lang, 'new_trainer_subject');
                             const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;

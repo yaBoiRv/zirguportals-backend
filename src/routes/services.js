@@ -129,46 +129,53 @@ module.exports = async function servicesRoutes(fastify) {
                 const title = b.full_name || 'New Service';
                 const serviceId = result[0].id;
 
-                for (const r of allUsers) {
-                    const prefs = r.profile?.notificationPreferences || {};
-                    if (r.email && prefs.new_listings !== false) {
-                        try {
-                            await prisma.notifications.create({
-                                data: {
-                                    user_id: r.id,
-                                    type: 'new_service',
-                                    title: 'New Service Listing',
-                                    content: title,
-                                    source_type: 'service',
-                                    source_id: serviceId,
-                                    source_user_id: userId
-                                }
-                            });
-                        } catch (e) {
-                            console.error('Failed to create notification', e);
+                (async () => {
+                    for (const r of allUsers) {
+                        const prefs = r.profile?.notificationPreferences || {};
+                        const pushEnabled = prefs.new_listings_push ?? prefs.new_listings ?? true;
+                        const emailEnabled = prefs.new_listings_email ?? prefs.new_listings ?? true;
+
+                        if (pushEnabled !== false) {
+                            try {
+                                await prisma.notifications.create({
+                                    data: {
+                                        user_id: r.id,
+                                        type: 'new_service',
+                                        title: 'New Service Listing',
+                                        content: title,
+                                        source_type: 'service',
+                                        source_id: serviceId,
+                                        source_user_id: userId
+                                    }
+                                });
+                            } catch (e) {
+                                console.error('Failed to create notification', e);
+                            }
                         }
 
-                        const lang = r.profile?.defaultLanguage || 'en';
-                        const subjectFn = getTranslation(lang, 'new_service_subject');
-                        const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
+                        if (r.email && emailEnabled !== false) {
+                            const lang = r.profile?.defaultLanguage || 'en';
+                            const subjectFn = getTranslation(lang, 'new_service_subject');
+                            const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
 
-                        const bodyFn = getTranslation(lang, 'new_service_body');
-                        const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
+                            const bodyFn = getTranslation(lang, 'new_service_body');
+                            const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
 
-                        const viewService = getTranslation(lang, 'view_service');
-                        const serviceUrl = `${process.env.APP_WEB_URL}/${lang}/services/${serviceId}`;
+                            const viewService = getTranslation(lang, 'view_service');
+                            const serviceUrl = `${process.env.APP_WEB_URL}/${lang}/services/${serviceId}`;
 
-                        await sendEmail({
-                            to: r.email,
-                            subject: subject,
-                            html: `<p>${body}</p>
-                                    <p>${b.bio ? b.bio.substring(0, 100) + '...' : ''}</p>
-                                    <p>${b.hourly_rate ? b.hourly_rate + ' EUR/hr' : ''}</p>
-                                    <p><a href="${serviceUrl}">${viewService}</a></p>`
-                        });
-                        await new Promise(r => setTimeout(r, 600));
+                            await sendEmail({
+                                to: r.email,
+                                subject: subject,
+                                html: `<p>${body}</p>
+                                        <p>${b.bio ? b.bio.substring(0, 100) + '...' : ''}</p>
+                                        <p>${b.hourly_rate ? b.hourly_rate + ' EUR/hr' : ''}</p>
+                                        <p><a href="${serviceUrl}">${viewService}</a></p>`
+                            });
+                            await new Promise(r => setTimeout(r, 600));
+                        }
                     }
-                }
+                })();
             } catch (e) {
                 console.error('Error sending new service emails:', e);
             }

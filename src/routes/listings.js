@@ -278,7 +278,7 @@ module.exports = async function listingsRoutes(fastify) {
                 // Fetch users who want new listings (default true)
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: userId } },
-                    include: { profiles: true }
+                    include: { profile: true }
                 });
                 console.log(`[ListingDebug] Found ${allUsers.length} potential recipients`);
 
@@ -286,8 +286,11 @@ module.exports = async function listingsRoutes(fastify) {
 
                 (async () => {
                     for (const r of allUsers) {
-                        const prefs = r.profiles?.notificationPreferences || {};
-                        if (r.email && prefs.new_listings !== false) {
+                        const prefs = r.profile?.notificationPreferences || {};
+                        const pushEnabled = prefs.new_listings_push ?? prefs.new_listings ?? true;
+                        const emailEnabled = prefs.new_listings_email ?? prefs.new_listings ?? true;
+
+                        if (pushEnabled !== false) {
                             try {
                                 await prisma.notifications.create({
                                     data: {
@@ -303,8 +306,10 @@ module.exports = async function listingsRoutes(fastify) {
                             } catch (e) {
                                 console.error('Failed to create notification', e);
                             }
+                        }
 
-                            const lang = r.profiles?.defaultLanguage || 'en';
+                        if (r.email && emailEnabled !== false) {
+                            const lang = r.profile?.defaultLanguage || 'en';
                             const subjectFn = getTranslation(lang, 'new_listing_subject');
                             const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
 
@@ -664,7 +669,7 @@ module.exports = async function listingsRoutes(fastify) {
                 console.log('[ListingDebug] Broadcasting email for new EQUIPMENT listing');
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: userId } },
-                    include: { profiles: true }
+                    include: { profile: true }
                 });
                 console.log(`[ListingDebug] Found ${allUsers.length} potential recipients`);
 
@@ -672,8 +677,11 @@ module.exports = async function listingsRoutes(fastify) {
 
                 (async () => {
                     for (const r of allUsers) {
-                        const prefs = r.profiles?.notificationPreferences || {};
-                        if (r.email && prefs.new_listings !== false) {
+                        const prefs = r.profile?.notificationPreferences || {};
+                        const pushEnabled = prefs.new_listings_push ?? prefs.new_listings ?? true;
+                        const emailEnabled = prefs.new_listings_email ?? prefs.new_listings ?? true;
+
+                        if (pushEnabled !== false) {
                             try {
                                 await prisma.notifications.create({
                                     data: {
@@ -689,8 +697,10 @@ module.exports = async function listingsRoutes(fastify) {
                             } catch (e) {
                                 console.error('Failed to create notification', e);
                             }
+                        }
 
-                            const lang = r.profiles?.defaultLanguage || 'en';
+                        if (r.email && emailEnabled !== false) {
+                            const lang = r.profile?.defaultLanguage || 'en';
                             const subjectFn = getTranslation(lang, 'new_listing_subject');
                             const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
 
