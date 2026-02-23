@@ -125,11 +125,7 @@ module.exports = async function announcementsRoutes(fastify) {
                 console.log('[AnnouncementDebug] Broadcasting announcement');
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: req.user.id } },
-                    select: {
-                        id: true,
-                        email: true,
-                        profile: { select: { notificationPreferences: true, defaultLanguage: true } }
-                    }
+                    include: { profile: true }
                 });
                 console.log(`[AnnouncementDebug] Found ${allUsers.length} total users to check`);
 
