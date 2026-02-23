@@ -1357,13 +1357,18 @@ const start = async () => {
     // --- NOTIFICATIONS ---
     fastify.get("/notifications", { preHandler: requireAuth }, async (req, reply) => {
       try {
-        const { limit = 20, offset = 0 } = req.query;
+        const { limit = 20, offset = 0, unreadOnly } = req.query;
         const take = parseInt(limit);
         const skip = parseInt(offset);
 
+        let whereClause = { user_id: req.user.id };
+        if (unreadOnly === 'true') {
+          whereClause.read_at = null;
+        }
+
         const [notifs, unread, total] = await Promise.all([
           prisma.notifications.findMany({
-            where: { user_id: req.user.id },
+            where: whereClause,
             orderBy: { created_at: 'desc' },
             take,
             skip
@@ -1372,7 +1377,7 @@ const start = async () => {
             where: { user_id: req.user.id, read_at: null }
           }),
           prisma.notifications.count({
-            where: { user_id: req.user.id }
+            where: whereClause
           })
         ]);
 
