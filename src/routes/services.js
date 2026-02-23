@@ -132,6 +132,22 @@ module.exports = async function servicesRoutes(fastify) {
                 for (const r of allUsers) {
                     const prefs = r.profile?.notificationPreferences || {};
                     if (r.email && prefs.new_listings !== false) {
+                        try {
+                            await prisma.notifications.create({
+                                data: {
+                                    user_id: r.id,
+                                    type: 'new_service',
+                                    title: 'New Service Listing',
+                                    content: title,
+                                    source_type: 'service',
+                                    source_id: serviceId,
+                                    source_user_id: userId
+                                }
+                            });
+                        } catch (e) {
+                            console.error('Failed to create notification', e);
+                        }
+
                         const lang = r.profile?.defaultLanguage || 'en';
                         const subjectFn = getTranslation(lang, 'new_service_subject');
                         const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
