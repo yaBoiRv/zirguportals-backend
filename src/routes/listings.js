@@ -278,7 +278,7 @@ module.exports = async function listingsRoutes(fastify) {
                 // Fetch users who want new listings (default true)
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: userId } },
-                    include: { profile: { select: { defaultLanguage: true, notificationPreferences: true } } }
+                    include: { profile: true }
                 });
                 console.log(`[ListingDebug] Found ${allUsers.length} potential recipients`);
 
@@ -661,7 +661,7 @@ module.exports = async function listingsRoutes(fastify) {
                 console.log('[ListingDebug] Broadcasting email for new EQUIPMENT listing');
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: userId } },
-                    include: { profile: { select: { defaultLanguage: true, notificationPreferences: true } } }
+                    include: { profile: true }
                 });
                 console.log(`[ListingDebug] Found ${allUsers.length} potential recipients`);
 

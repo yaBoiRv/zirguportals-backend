@@ -122,7 +122,7 @@ module.exports = async function servicesRoutes(fastify) {
                 console.log('[ServiceDebug] Broadcasting email for new SERVICE');
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: userId } },
-                    include: { profile: { select: { defaultLanguage: true, notificationPreferences: true } } }
+                    include: { profile: true }
                 });
                 console.log(`[ServiceDebug] Found ${allUsers.length} potential recipients`);
 

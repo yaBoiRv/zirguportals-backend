@@ -990,7 +990,7 @@ const start = async () => {
           console.log(`[ChatDebug] Sending email to offline/other participants for conversation ${conversationId}`);
           const participants = await prisma.conversationParticipant.findMany({
             where: { conversationId, userId: { not: socket.user.id } },
-            include: { user: { include: { profile: true } } }
+            include: { user: { include: { user: true } } }
           });
           console.log(`[ChatDebug] Found ${participants.length} other participants.`);
 
@@ -1011,23 +1011,26 @@ const start = async () => {
               fastify.log.error(notifErr, "Failed to create chat notification");
             }
 
-            const prefs = p.user?.profile?.notificationPreferences || {};
-            const lang = p.user?.profile?.defaultLanguage || 'en';
+            const profile = p.user;
+            const actualUser = p.user?.user;
+
+            const prefs = profile?.notificationPreferences || {};
+            const lang = profile?.defaultLanguage || 'en';
             // Default chat_messages to true if undefined
-            console.log(`[ChatDebug] Processing participant ${p.user.id} (${p.user.email}). Prefs: chat_messages=${prefs.chat_messages}`);
-            if (p.user.email && prefs.chat_messages !== false) {
-              console.log(`[ChatDebug] Sending email to ${p.user.email}`);
+            console.log(`[ChatDebug] Processing participant ${p.userId}. Prefs: chat_messages=${prefs.chat_messages}`);
+            if (actualUser?.email && prefs.chat_messages !== false) {
+              console.log(`[ChatDebug] Sending email to ${actualUser.email}`);
               const subject = getTranslation(lang, 'chat_subject');
               const body = getTranslation(lang, 'chat_body');
               const linkText = getTranslation(lang, 'view_message');
 
               await sendEmail({
-                to: p.user.email,
+                to: actualUser.email,
                 subject: subject,
                 html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/messages">${linkText}</a></p>`
               });
             } else {
-              console.log(`[ChatDebug] Skipped ${p.user.email}: prefs check failed`);
+              console.log(`[ChatDebug] Skipped email to ${actualUser?.email}: prefs check failed`);
             }
           }
         } catch (e) {
@@ -1411,6 +1414,26 @@ const start = async () => {
         data: { read_at: new Date() }
       });
       return { success: true };
+    });
+
+    fastify.get("/test-notifs", { preHandler: requireAuth }, async (req, reply) => {
+      try {
+        const u = req.user.id;
+        const n = await prisma.notifications.create({
+          data: {
+            user_id: u,
+            type: 'new_listing_in_area',
+            title: 'Test listing',
+            content: 'Test content',
+            source_type: 'horse',
+            source_id: 'd9b2d63d-a233-4123-8478-f6a8e32af452',
+            source_user_id: u
+          }
+        });
+        return { success: true, notif: n };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
     });
 
     // --- FORCE FIX DATA INTEGRITY ON STARTUP ---

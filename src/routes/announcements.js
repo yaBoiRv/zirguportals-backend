@@ -141,8 +141,7 @@ module.exports = async function announcementsRoutes(fastify) {
                         content: title,
                         source_type: 'announcement',
                         source_id: announcement.id,
-                        source_user_id: req.user.id, // Ensure this field matches schema logic if necessary
-                        metadata: {}
+                        source_user_id: req.user.id
                     }));
 
                 if (notifications.length > 0) {

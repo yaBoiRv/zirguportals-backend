@@ -152,7 +152,7 @@ module.exports = async function trainersRoutes(fastify) {
                 console.log('[TrainerDebug] Broadcasting email for new TRAINER');
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: userId } },
-                    include: { profile: { select: { defaultLanguage: true, notificationPreferences: true } } }
+                    include: { profile: true }
                 });
                 console.log(`[TrainerDebug] Found ${allUsers.length} potential recipients`);
 
