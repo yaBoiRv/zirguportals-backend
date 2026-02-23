@@ -286,9 +286,23 @@ module.exports = async function listingsRoutes(fastify) {
 
                 for (const r of allUsers) {
                     const prefs = r.profile?.notificationPreferences || {};
-                    // console.log(`[ListingDebug] Checking user ${r.email}: new_listings=${prefs.new_listings}`);
                     if (r.email && prefs.new_listings !== false) {
-                        // console.log(`[ListingDebug] Sending to ${r.email}`);
+                        try {
+                            await prisma.notifications.create({
+                                data: {
+                                    user_id: r.id,
+                                    type: 'new_listing_in_area',
+                                    title: 'New Horse Listing',
+                                    content: title,
+                                    source_type: 'horse',
+                                    source_id: listingId,
+                                    source_user_id: userId
+                                }
+                            });
+                        } catch (e) {
+                            console.error('Failed to create notification', e);
+                        }
+
                         const lang = r.profile?.defaultLanguage || 'en';
                         const subjectFn = getTranslation(lang, 'new_listing_subject');
                         const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
@@ -656,6 +670,22 @@ module.exports = async function listingsRoutes(fastify) {
                 for (const r of allUsers) {
                     const prefs = r.profile?.notificationPreferences || {};
                     if (r.email && prefs.new_listings !== false) {
+                        try {
+                            await prisma.notifications.create({
+                                data: {
+                                    user_id: r.id,
+                                    type: 'new_listing_in_area',
+                                    title: 'New Equipment Listing',
+                                    content: title,
+                                    source_type: 'equipment',
+                                    source_id: listingId,
+                                    source_user_id: userId
+                                }
+                            });
+                        } catch (e) {
+                            console.error('Failed to create notification', e);
+                        }
+
                         const lang = r.profile?.defaultLanguage || 'en';
                         const subjectFn = getTranslation(lang, 'new_listing_subject');
                         const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
