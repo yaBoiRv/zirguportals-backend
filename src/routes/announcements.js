@@ -164,7 +164,7 @@ module.exports = async function announcementsRoutes(fastify) {
                                 await sendEmail({
                                     to: u.email,
                                     subject: subject,
-                                    html: `<h1>${title}</h1><p>${content.substring(0, 200)}...</p><p><a href="${process.env.APP_WEB_URL}/${lang}/announcements">${readMore}</a></p>`
+                                    html: `<h1>${title}</h1><p>${content.substring(0, 200)}...</p><p><a href="${process.env.APP_WEB_URL}/${lang}/announcements?announcementId=${announcement.id}">${readMore}</a></p>`
                                 });
                                 console.log(`[AnnouncementEmail] Sent successfully to ${u.email}`);
                                 // Prevent Resend rate limits (max 2 per sec)
