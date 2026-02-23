@@ -1027,7 +1027,7 @@ const start = async () => {
               await sendEmail({
                 to: actualUser.email,
                 subject: subject,
-                html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/messages">${linkText}</a></p>`
+                html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/messages?chatId=${conversationId}">${linkText}</a></p>`
               });
             } else {
               console.log(`[ChatDebug] Skipped email to ${actualUser?.email}: prefs check failed`);
@@ -1375,6 +1375,10 @@ const start = async () => {
             where: { user_id: req.user.id }
           })
         ]);
+
+        if (notifs.length > 0) {
+          console.log("[NotificationDebug] Ex: ", notifs[0]);
+        }
 
         return {
           notifications: notifs,
