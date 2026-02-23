@@ -284,47 +284,49 @@ module.exports = async function listingsRoutes(fastify) {
 
                 const title = b.name || b.title || 'New Horse Listing';
 
-                for (const r of allUsers) {
-                    const prefs = r.profiles?.notificationPreferences || {};
-                    if (r.email && prefs.new_listings !== false) {
-                        try {
-                            await prisma.notifications.create({
-                                data: {
-                                    user_id: r.id,
-                                    type: 'new_listing_in_area',
-                                    title: 'New Horse Listing',
-                                    content: title,
-                                    source_type: 'horse',
-                                    source_id: listingId,
-                                    source_user_id: userId
-                                }
-                            });
-                        } catch (e) {
-                            console.error('Failed to create notification', e);
-                        }
+                (async () => {
+                    for (const r of allUsers) {
+                        const prefs = r.profiles?.notificationPreferences || {};
+                        if (r.email && prefs.new_listings !== false) {
+                            try {
+                                await prisma.notifications.create({
+                                    data: {
+                                        user_id: r.id,
+                                        type: 'new_listing_in_area',
+                                        title: 'New Horse Listing',
+                                        content: title,
+                                        source_type: 'horse',
+                                        source_id: listingId,
+                                        source_user_id: userId
+                                    }
+                                });
+                            } catch (e) {
+                                console.error('Failed to create notification', e);
+                            }
 
-                        const lang = r.profiles?.defaultLanguage || 'en';
-                        const subjectFn = getTranslation(lang, 'new_listing_subject');
-                        const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
+                            const lang = r.profiles?.defaultLanguage || 'en';
+                            const subjectFn = getTranslation(lang, 'new_listing_subject');
+                            const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
 
-                        const bodyFn = getTranslation(lang, 'new_listing_body');
-                        const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
+                            const bodyFn = getTranslation(lang, 'new_listing_body');
+                            const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
 
-                        const priceLabel = getTranslation(lang, 'price');
-                        const viewListing = getTranslation(lang, 'view_listing');
-                        const listingUrl = `${process.env.APP_WEB_URL}/${lang}/horses/${listingId}`;
+                            const priceLabel = getTranslation(lang, 'price');
+                            const viewListing = getTranslation(lang, 'view_listing');
+                            const listingUrl = `${process.env.APP_WEB_URL}/${lang}/horses/${listingId}`;
 
-                        await sendEmail({
-                            to: r.email,
-                            subject: subject,
-                            html: `<p>${body}</p>
+                            await sendEmail({
+                                to: r.email,
+                                subject: subject,
+                                html: `<p>${body}</p>
                                     <p>${b.description ? b.description.substring(0, 100) + '...' : ''}</p>
                                     <p>${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>
                                     <p><a href="${listingUrl}">${viewListing}</a></p>`
-                        });
-                        await new Promise(r => setTimeout(r, 600));
+                            });
+                            await new Promise(r => setTimeout(r, 600));
+                        }
                     }
-                }
+                })();
             } catch (e) {
                 console.error('Error sending new listing emails:', e);
             }
@@ -668,47 +670,49 @@ module.exports = async function listingsRoutes(fastify) {
 
                 const title = b.title || 'New Equipment Listing';
 
-                for (const r of allUsers) {
-                    const prefs = r.profiles?.notificationPreferences || {};
-                    if (r.email && prefs.new_listings !== false) {
-                        try {
-                            await prisma.notifications.create({
-                                data: {
-                                    user_id: r.id,
-                                    type: 'new_listing_in_area',
-                                    title: 'New Equipment Listing',
-                                    content: title,
-                                    source_type: 'equipment',
-                                    source_id: listingId,
-                                    source_user_id: userId
-                                }
-                            });
-                        } catch (e) {
-                            console.error('Failed to create notification', e);
-                        }
+                (async () => {
+                    for (const r of allUsers) {
+                        const prefs = r.profiles?.notificationPreferences || {};
+                        if (r.email && prefs.new_listings !== false) {
+                            try {
+                                await prisma.notifications.create({
+                                    data: {
+                                        user_id: r.id,
+                                        type: 'new_listing_in_area',
+                                        title: 'New Equipment Listing',
+                                        content: title,
+                                        source_type: 'equipment',
+                                        source_id: listingId,
+                                        source_user_id: userId
+                                    }
+                                });
+                            } catch (e) {
+                                console.error('Failed to create notification', e);
+                            }
 
-                        const lang = r.profiles?.defaultLanguage || 'en';
-                        const subjectFn = getTranslation(lang, 'new_listing_subject');
-                        const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
+                            const lang = r.profiles?.defaultLanguage || 'en';
+                            const subjectFn = getTranslation(lang, 'new_listing_subject');
+                            const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
 
-                        const bodyFn = getTranslation(lang, 'new_equipment_body');
-                        const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
+                            const bodyFn = getTranslation(lang, 'new_equipment_body');
+                            const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
 
-                        const priceLabel = getTranslation(lang, 'price');
-                        const viewListing = getTranslation(lang, 'view_listing');
-                        const listingUrl = `${process.env.APP_WEB_URL}/${lang}/equipment/${listingId}`;
+                            const priceLabel = getTranslation(lang, 'price');
+                            const viewListing = getTranslation(lang, 'view_listing');
+                            const listingUrl = `${process.env.APP_WEB_URL}/${lang}/equipment/${listingId}`;
 
-                        await sendEmail({
-                            to: r.email,
-                            subject: subject,
-                            html: `<p>${body}</p>
+                            await sendEmail({
+                                to: r.email,
+                                subject: subject,
+                                html: `<p>${body}</p>
                                     <p>${b.description ? b.description.substring(0, 100) + '...' : ''}</p>
                                     <p>${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>
                                     <p><a href="${listingUrl}">${viewListing}</a></p>`
-                        });
-                        await new Promise(r => setTimeout(r, 600));
+                            });
+                            await new Promise(r => setTimeout(r, 600));
+                        }
                     }
-                }
+                })();
             } catch (e) {
                 console.error('Error sending new equipment listing emails:', e);
             }

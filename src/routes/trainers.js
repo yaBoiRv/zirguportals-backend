@@ -159,46 +159,48 @@ module.exports = async function trainersRoutes(fastify) {
                 const title = b.name || 'New Trainer';
                 const trainerId = result[0].id;
 
-                for (const r of allUsers) {
-                    const prefs = r.profile?.notificationPreferences || {};
-                    if (r.email && prefs.new_listings !== false) {
-                        try {
-                            await prisma.notifications.create({
-                                data: {
-                                    user_id: r.id,
-                                    type: 'new_trainer',
-                                    title: 'New Trainer Profile',
-                                    content: title,
-                                    source_type: 'trainer',
-                                    source_id: trainerId,
-                                    source_user_id: userId
-                                }
-                            });
-                        } catch (e) {
-                            console.error('Failed to create notification', e);
-                        }
+                (async () => {
+                    for (const r of allUsers) {
+                        const prefs = r.profile?.notificationPreferences || {};
+                        if (r.email && prefs.new_listings !== false) {
+                            try {
+                                await prisma.notifications.create({
+                                    data: {
+                                        user_id: r.id,
+                                        type: 'new_trainer',
+                                        title: 'New Trainer Profile',
+                                        content: title,
+                                        source_type: 'trainer',
+                                        source_id: trainerId,
+                                        source_user_id: userId
+                                    }
+                                });
+                            } catch (e) {
+                                console.error('Failed to create notification', e);
+                            }
 
-                        const lang = r.profile?.defaultLanguage || 'en';
-                        const subjectFn = getTranslation(lang, 'new_trainer_subject');
-                        const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
+                            const lang = r.profile?.defaultLanguage || 'en';
+                            const subjectFn = getTranslation(lang, 'new_trainer_subject');
+                            const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
 
-                        const bodyFn = getTranslation(lang, 'new_trainer_body');
-                        const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
+                            const bodyFn = getTranslation(lang, 'new_trainer_body');
+                            const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
 
-                        const viewProfile = getTranslation(lang, 'view_profile');
-                        const trainerUrl = `${process.env.APP_WEB_URL}/${lang}/trainers/${trainerId}`;
+                            const viewProfile = getTranslation(lang, 'view_profile');
+                            const trainerUrl = `${process.env.APP_WEB_URL}/${lang}/trainers/${trainerId}`;
 
-                        await sendEmail({
-                            to: r.email,
-                            subject: subject,
-                            html: `<p>${body}</p>
+                            await sendEmail({
+                                to: r.email,
+                                subject: subject,
+                                html: `<p>${body}</p>
                                     <p>${b.bio ? b.bio.substring(0, 100) + '...' : ''}</p>
                                     <p>${b.hourly_rate ? b.hourly_rate + ' EUR/hr' : ''}</p>
                                     <p><a href="${trainerUrl}">${viewProfile}</a></p>`
-                        });
-                        await new Promise(r => setTimeout(r, 600));
+                            });
+                            await new Promise(r => setTimeout(r, 600));
+                        }
                     }
-                }
+                })();
             } catch (e) {
                 console.error('Error sending new trainer emails:', e);
             }
