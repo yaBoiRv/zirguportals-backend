@@ -125,7 +125,7 @@ module.exports = async function announcementsRoutes(fastify) {
                 console.log('[AnnouncementDebug] Broadcasting announcement');
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: req.user.id } },
-                    include: { profile: true }
+                    include: { profiles: true }
                 });
                 console.log(`[AnnouncementDebug] Found ${allUsers.length} total users to check`);
 
@@ -149,8 +149,8 @@ module.exports = async function announcementsRoutes(fastify) {
                 // Send Emails
                 for (const u of allUsers) {
                     try {
-                        const prefs = u.profile?.notificationPreferences || {};
-                        const lang = u.profile?.defaultLanguage || 'en';
+                        const prefs = u.profiles?.notificationPreferences || {};
+                        const lang = u.profiles?.defaultLanguage || 'en';
 
                         console.log(`[AnnouncementEmail] Checking user ${u.id} (${u.email}). Prefs: new_announcements_email=${prefs.new_announcements_email}`);
 

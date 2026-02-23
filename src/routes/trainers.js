@@ -152,7 +152,7 @@ module.exports = async function trainersRoutes(fastify) {
                 console.log('[TrainerDebug] Broadcasting email for new TRAINER');
                 const allUsers = await prisma.user.findMany({
                     where: { id: { not: userId } },
-                    include: { profile: true }
+                    include: { profiles: true }
                 });
                 console.log(`[TrainerDebug] Found ${allUsers.length} potential recipients`);
 
@@ -160,7 +160,7 @@ module.exports = async function trainersRoutes(fastify) {
                 const trainerId = result[0].id;
 
                 for (const r of allUsers) {
-                    const prefs = r.profile?.notificationPreferences || {};
+                    const prefs = r.profiles?.notificationPreferences || {};
                     if (r.email && prefs.new_listings !== false) {
                         try {
                             await prisma.notifications.create({
@@ -178,7 +178,7 @@ module.exports = async function trainersRoutes(fastify) {
                             console.error('Failed to create notification', e);
                         }
 
-                        const lang = r.profile?.defaultLanguage || 'en';
+                        const lang = r.profiles?.defaultLanguage || 'en';
                         const subjectFn = getTranslation(lang, 'new_trainer_subject');
                         const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
 
