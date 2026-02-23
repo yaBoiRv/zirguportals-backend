@@ -148,19 +148,29 @@ module.exports = async function announcementsRoutes(fastify) {
 
                 // Send Emails
                 for (const u of allUsers) {
-                    const prefs = u.profile?.notificationPreferences || {};
-                    const lang = u.profile?.defaultLanguage || 'en';
+                    try {
+                        const prefs = u.profile?.notificationPreferences || {};
+                        const lang = u.profile?.defaultLanguage || 'en';
 
-                    if (u.email && prefs.new_announcements_email !== false) {
-                        const subjectFn = getTranslation(lang, 'new_announcement_subject');
-                        const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
-                        const readMore = getTranslation(lang, 'read_more');
+                        console.log(`[AnnouncementEmail] Checking user ${u.id} (${u.email}). Prefs: new_announcements_email=${prefs.new_announcements_email}`);
 
-                        await sendEmail({
-                            to: u.email,
-                            subject: subject,
-                            html: `<h1>${title}</h1><p>${content.substring(0, 200)}...</p><p><a href="${process.env.APP_WEB_URL}/${lang}/announcements">${readMore}</a></p>`
-                        });
+                        if (u.email && prefs.new_announcements_email !== false) {
+                            console.log(`[AnnouncementEmail] Sending to ${u.email}...`);
+                            const subjectFn = getTranslation(lang, 'new_announcement_subject');
+                            const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
+                            const readMore = getTranslation(lang, 'read_more');
+
+                            await sendEmail({
+                                to: u.email,
+                                subject: subject,
+                                html: `<h1>${title}</h1><p>${content.substring(0, 200)}...</p><p><a href="${process.env.APP_WEB_URL}/${lang}/announcements">${readMore}</a></p>`
+                            });
+                            console.log(`[AnnouncementEmail] Sent successfully to ${u.email}`);
+                        } else {
+                            console.log(`[AnnouncementEmail] Skipped ${u.email}: No email or pref is false`);
+                        }
+                    } catch (e) {
+                        console.error(`[AnnouncementEmail] Failed for ${u.email}:`, e);
                     }
                 }
             } catch (err) {
