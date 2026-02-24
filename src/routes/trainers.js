@@ -5,6 +5,7 @@ module.exports = async function trainersRoutes(fastify) {
     const prisma = fastify.prisma;
     const { sendEmail } = require('../services/emailService');
     const { getTranslation } = require('../config/emailTranslations');
+    const { broadcastNewListing } = require('../services/notificationUtils');
 
     // Middleware to require auth
     async function requireAuth(req, reply) {
@@ -148,66 +149,8 @@ module.exports = async function trainersRoutes(fastify) {
             await prisma.$queryRawUnsafe(`UPDATE public.profiles SET has_trainer_profile = true WHERE user_id = $1::uuid`, userId);
 
             // Broadcast Email for New Trainer
-            try {
-                console.log('[TrainerDebug] Broadcasting email for new TRAINER');
-                const allUsers = await prisma.user.findMany({
-                    where: { id: { not: userId } },
-                    include: { profile: true }
-                });
-                console.log(`[TrainerDebug] Found ${allUsers.length} potential recipients`);
-
-                const title = b.name || 'New Trainer';
-                const trainerId = result[0].id;
-
-                (async () => {
-                    for (const r of allUsers) {
-                        const prefs = r.profile?.notificationPreferences || {};
-                        const pushEnabled = prefs.new_listings_push ?? prefs.new_listings ?? true;
-                        const emailEnabled = prefs.new_listings_email ?? prefs.new_listings ?? true;
-
-                        if (pushEnabled !== false) {
-                            try {
-                                await prisma.notifications.create({
-                                    data: {
-                                        user_id: r.id,
-                                        type: 'new_trainer',
-                                        title: 'New Trainer Profile',
-                                        content: title,
-                                        source_type: 'trainer',
-                                        source_id: trainerId,
-                                        source_user_id: userId
-                                    }
-                                });
-                            } catch (e) {
-                                console.error('Failed to create notification', e);
-                            }
-                        }
-
-                        if (r.email && emailEnabled !== false) {
-                            const lang = r.profile?.defaultLanguage || 'en';
-                            const subjectFn = getTranslation(lang, 'new_trainer_subject');
-                            const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
-
-                            const bodyFn = getTranslation(lang, 'new_trainer_body');
-                            const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
-
-                            const viewProfile = getTranslation(lang, 'view_profile');
-                            const trainerUrl = `${process.env.APP_WEB_URL}/${lang}/trainers/${trainerId}`;
-
-                            await sendEmail({
-                                to: r.email,
-                                subject: subject,
-                                html: `<p>${body}</p>
-                                    <p>${b.bio ? b.bio.substring(0, 100) + '...' : ''}</p>
-                                    <p>${b.hourly_rate ? b.hourly_rate + ' EUR/hr' : ''}</p>
-                                    <p><a href="${trainerUrl}">${viewProfile}</a></p>`
-                            });
-                            await new Promise(r => setTimeout(r, 600));
-                        }
-                    }
-                })();
-            } catch (e) {
-                console.error('Error sending new trainer emails:', e);
+            if (b.visible === true) {
+                await broadcastNewListing(prisma, 'trainer', b, result[0].id, userId);
             }
 
             return reply.code(201).send(result[0]);
@@ -225,12 +168,16 @@ module.exports = async function trainersRoutes(fastify) {
 
         try {
             // Check ownership
-            const existing = await prisma.$queryRawUnsafe(`SELECT user_id FROM public.trainers WHERE id = $1::uuid`, id);
+            const existing = await prisma.$queryRawUnsafe(`SELECT user_id, visible FROM public.trainers WHERE id = $1::uuid`, id);
             if (!existing.length) return reply.code(404).send({ error: 'Trainer not found' });
 
             if (existing[0].user_id !== userId) {
                 return reply.code(403).send({ error: 'Forbidden' });
             }
+
+            const wasNotVisible = !existing[0].visible;
+            const isNowVisible = b.visible === true;
+            const shouldBroadcast = wasNotVisible && isNowVisible;
 
             // Dynamically build SET clause
             const fields = [];
@@ -284,6 +231,10 @@ module.exports = async function trainersRoutes(fastify) {
             const query = `UPDATE public.trainers SET ${fields.join(', ')} WHERE id = $1::uuid`;
 
             await prisma.$queryRawUnsafe(query, ...values);
+
+            if (shouldBroadcast) {
+                await broadcastNewListing(prisma, 'trainer', b, id, userId);
+            }
 
             return { id };
         } catch (e) {

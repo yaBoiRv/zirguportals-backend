@@ -4,6 +4,7 @@ module.exports = async function servicesRoutes(fastify) {
     const prisma = fastify.prisma;
     const { sendEmail } = require('../services/emailService');
     const { getTranslation } = require('../config/emailTranslations');
+    const { broadcastNewListing } = require('../services/notificationUtils');
 
     // Middleware to require auth
     async function requireAuth(req, reply) {
@@ -118,66 +119,8 @@ module.exports = async function servicesRoutes(fastify) {
                 b.custom_specialty || null
             );
             // Broadcast Email for New Service
-            try {
-                console.log('[ServiceDebug] Broadcasting email for new SERVICE');
-                const allUsers = await prisma.user.findMany({
-                    where: { id: { not: userId } },
-                    include: { profile: true }
-                });
-                console.log(`[ServiceDebug] Found ${allUsers.length} potential recipients`);
-
-                const title = b.full_name || 'New Service';
-                const serviceId = result[0].id;
-
-                (async () => {
-                    for (const r of allUsers) {
-                        const prefs = r.profile?.notificationPreferences || {};
-                        const pushEnabled = prefs.new_listings_push ?? prefs.new_listings ?? true;
-                        const emailEnabled = prefs.new_listings_email ?? prefs.new_listings ?? true;
-
-                        if (pushEnabled !== false) {
-                            try {
-                                await prisma.notifications.create({
-                                    data: {
-                                        user_id: r.id,
-                                        type: 'new_service',
-                                        title: 'New Service Listing',
-                                        content: title,
-                                        source_type: 'service',
-                                        source_id: serviceId,
-                                        source_user_id: userId
-                                    }
-                                });
-                            } catch (e) {
-                                console.error('Failed to create notification', e);
-                            }
-                        }
-
-                        if (r.email && emailEnabled !== false) {
-                            const lang = r.profile?.defaultLanguage || 'en';
-                            const subjectFn = getTranslation(lang, 'new_service_subject');
-                            const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
-
-                            const bodyFn = getTranslation(lang, 'new_service_body');
-                            const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
-
-                            const viewService = getTranslation(lang, 'view_service');
-                            const serviceUrl = `${process.env.APP_WEB_URL}/${lang}/services/${serviceId}`;
-
-                            await sendEmail({
-                                to: r.email,
-                                subject: subject,
-                                html: `<p>${body}</p>
-                                        <p>${b.bio ? b.bio.substring(0, 100) + '...' : ''}</p>
-                                        <p>${b.hourly_rate ? b.hourly_rate + ' EUR/hr' : ''}</p>
-                                        <p><a href="${serviceUrl}">${viewService}</a></p>`
-                            });
-                            await new Promise(r => setTimeout(r, 600));
-                        }
-                    }
-                })();
-            } catch (e) {
-                console.error('Error sending new service emails:', e);
+            if (b.visible === true) {
+                await broadcastNewListing(prisma, 'service', b, result[0].id, userId);
             }
 
             return reply.code(201).send(result[0]);
@@ -194,9 +137,13 @@ module.exports = async function servicesRoutes(fastify) {
         const b = req.body;
 
         try {
-            const existing = await prisma.$queryRawUnsafe(`SELECT user_id FROM public.services WHERE id = $1::uuid`, id);
+            const existing = await prisma.$queryRawUnsafe(`SELECT user_id, visible FROM public.services WHERE id = $1::uuid`, id);
             if (!existing.length) return reply.code(404).send({ error: 'Service not found' });
             if (existing[0].user_id !== userId) return reply.code(403).send({ error: 'Forbidden' });
+
+            const wasNotVisible = !existing[0].visible;
+            const isNowVisible = b.visible === true;
+            const shouldBroadcast = wasNotVisible && isNowVisible;
 
             const fields = [];
             const values = [id];
@@ -238,6 +185,10 @@ module.exports = async function servicesRoutes(fastify) {
             if (fields.length > 1) {
                 const query = `UPDATE public.services SET ${fields.join(', ')} WHERE id = $1::uuid`;
                 await prisma.$queryRawUnsafe(query, ...values);
+            }
+
+            if (shouldBroadcast) {
+                await broadcastNewListing(prisma, 'service', b, id, userId);
             }
 
             return { id };

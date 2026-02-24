@@ -11,6 +11,7 @@ module.exports = async function listingsRoutes(fastify) {
 
     const { sendEmail } = require('../services/emailService');
     const { getTranslation } = require('../config/emailTranslations');
+    const { broadcastNewListing } = require('../services/notificationUtils');
 
     async function requireAuth(req, reply) {
         try {
@@ -273,67 +274,8 @@ module.exports = async function listingsRoutes(fastify) {
             }
 
             // Broadcast Email for New Listing
-            try {
-                console.log('[ListingDebug] Broadcasting email for new HORSE listing');
-                // Fetch users who want new listings (default true)
-                const allUsers = await prisma.user.findMany({
-                    where: { id: { not: userId } },
-                    include: { profile: true }
-                });
-                console.log(`[ListingDebug] Found ${allUsers.length} potential recipients`);
-
-                const title = b.name || b.title || 'New Horse Listing';
-
-                (async () => {
-                    for (const r of allUsers) {
-                        const prefs = r.profile?.notificationPreferences || {};
-                        const pushEnabled = prefs.new_listings_push ?? prefs.new_listings ?? true;
-                        const emailEnabled = prefs.new_listings_email ?? prefs.new_listings ?? true;
-
-                        if (pushEnabled !== false) {
-                            try {
-                                await prisma.notifications.create({
-                                    data: {
-                                        user_id: r.id,
-                                        type: 'new_listing_in_area',
-                                        title: 'New Horse Listing',
-                                        content: title,
-                                        source_type: 'horse',
-                                        source_id: listingId,
-                                        source_user_id: userId
-                                    }
-                                });
-                            } catch (e) {
-                                console.error('Failed to create notification', e);
-                            }
-                        }
-
-                        if (r.email && emailEnabled !== false) {
-                            const lang = r.profile?.defaultLanguage || 'en';
-                            const subjectFn = getTranslation(lang, 'new_listing_subject');
-                            const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
-
-                            const bodyFn = getTranslation(lang, 'new_listing_body');
-                            const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
-
-                            const priceLabel = getTranslation(lang, 'price');
-                            const viewListing = getTranslation(lang, 'view_listing');
-                            const listingUrl = `${process.env.APP_WEB_URL}/${lang}/horses/${listingId}`;
-
-                            await sendEmail({
-                                to: r.email,
-                                subject: subject,
-                                html: `<p>${body}</p>
-                                    <p>${b.description ? b.description.substring(0, 100) + '...' : ''}</p>
-                                    <p>${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>
-                                    <p><a href="${listingUrl}">${viewListing}</a></p>`
-                            });
-                            await new Promise(r => setTimeout(r, 600));
-                        }
-                    }
-                })();
-            } catch (e) {
-                console.error('Error sending new listing emails:', e);
+            if (b.visible === true) {
+                await broadcastNewListing(prisma, 'horse', b, listingId, userId);
             }
 
             return reply.code(201).send({ id: listingId });
@@ -362,9 +304,13 @@ module.exports = async function listingsRoutes(fastify) {
         }
 
         try {
-            const rows = await prisma.$queryRawUnsafe(`SELECT user_id FROM public.horse_listings WHERE id = $1::uuid`, id);
+            const rows = await prisma.$queryRawUnsafe(`SELECT user_id, visible FROM public.horse_listings WHERE id = $1::uuid`, id);
             if (!rows.length) return reply.code(404).send({ error: 'Not found' });
             if (rows[0].user_id !== userId) return reply.code(403).send({ error: 'Forbidden' });
+
+            const wasNotVisible = !rows[0].visible;
+            const isNowVisible = b.visible === true;
+            const shouldBroadcast = wasNotVisible && isNowVisible;
 
             const fields = [];
             const values = [id];
@@ -452,6 +398,10 @@ module.exports = async function listingsRoutes(fastify) {
                         await prisma.$queryRawUnsafe(`INSERT INTO public.horse_listing_temperaments (listing_id, temperament_id) VALUES ($1::uuid, $2)`, id, tid);
                     }
                 }
+            }
+
+            if (shouldBroadcast) {
+                await broadcastNewListing(prisma, 'horse', b, id, userId);
             }
 
             return { id };
@@ -665,66 +615,8 @@ module.exports = async function listingsRoutes(fastify) {
                 }
             }
             // Broadcast Email for New Equipment Listing
-            try {
-                console.log('[ListingDebug] Broadcasting email for new EQUIPMENT listing');
-                const allUsers = await prisma.user.findMany({
-                    where: { id: { not: userId } },
-                    include: { profile: true }
-                });
-                console.log(`[ListingDebug] Found ${allUsers.length} potential recipients`);
-
-                const title = b.title || 'New Equipment Listing';
-
-                (async () => {
-                    for (const r of allUsers) {
-                        const prefs = r.profile?.notificationPreferences || {};
-                        const pushEnabled = prefs.new_listings_push ?? prefs.new_listings ?? true;
-                        const emailEnabled = prefs.new_listings_email ?? prefs.new_listings ?? true;
-
-                        if (pushEnabled !== false) {
-                            try {
-                                await prisma.notifications.create({
-                                    data: {
-                                        user_id: r.id,
-                                        type: 'new_listing_in_area',
-                                        title: 'New Equipment Listing',
-                                        content: title,
-                                        source_type: 'equipment',
-                                        source_id: listingId,
-                                        source_user_id: userId
-                                    }
-                                });
-                            } catch (e) {
-                                console.error('Failed to create notification', e);
-                            }
-                        }
-
-                        if (r.email && emailEnabled !== false) {
-                            const lang = r.profile?.defaultLanguage || 'en';
-                            const subjectFn = getTranslation(lang, 'new_listing_subject');
-                            const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
-
-                            const bodyFn = getTranslation(lang, 'new_equipment_body');
-                            const body = typeof bodyFn === 'function' ? bodyFn(title) : bodyFn;
-
-                            const priceLabel = getTranslation(lang, 'price');
-                            const viewListing = getTranslation(lang, 'view_listing');
-                            const listingUrl = `${process.env.APP_WEB_URL}/${lang}/equipment/${listingId}`;
-
-                            await sendEmail({
-                                to: r.email,
-                                subject: subject,
-                                html: `<p>${body}</p>
-                                    <p>${b.description ? b.description.substring(0, 100) + '...' : ''}</p>
-                                    <p>${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>
-                                    <p><a href="${listingUrl}">${viewListing}</a></p>`
-                            });
-                            await new Promise(r => setTimeout(r, 600));
-                        }
-                    }
-                })();
-            } catch (e) {
-                console.error('Error sending new equipment listing emails:', e);
+            if (b.visible === true) {
+                await broadcastNewListing(prisma, 'equipment', b, listingId, userId);
             }
 
             return reply.code(201).send({ id: listingId });
@@ -739,9 +631,13 @@ module.exports = async function listingsRoutes(fastify) {
         const userId = req.user.id;
         const b = req.body;
         try {
-            const rows = await prisma.$queryRawUnsafe(`SELECT user_id FROM public.equipment_listings WHERE id = $1::uuid`, id);
+            const rows = await prisma.$queryRawUnsafe(`SELECT user_id, visible FROM public.equipment_listings WHERE id = $1::uuid`, id);
             if (!rows.length) return reply.code(404).send({ error: 'Not found' });
             if (rows[0].user_id !== userId) return reply.code(403).send({ error: 'Forbidden' });
+
+            const wasNotVisible = !rows[0].visible;
+            const isNowVisible = b.visible === true;
+            const shouldBroadcast = wasNotVisible && isNowVisible;
 
             const fields = [];
             const values = [id];
@@ -796,6 +692,10 @@ module.exports = async function listingsRoutes(fastify) {
                         await prisma.$queryRawUnsafe(`INSERT INTO public.equipment_listing_colors (listing_id, color_id) VALUES ($1::uuid, $2)`, id, cid);
                     }
                 }
+            }
+
+            if (shouldBroadcast) {
+                await broadcastNewListing(prisma, 'equipment', b, id, userId);
             }
 
             return { id };
