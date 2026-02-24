@@ -102,9 +102,19 @@ module.exports = async function servicesRoutes(fastify) {
     // GET /services/user/:userId
     fastify.get('/user/:userId', async (req, reply) => {
         const { userId } = req.params;
+        const { limit = 10, offset = 0 } = req.query;
         try {
-            const rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.services WHERE user_id = $1::uuid ORDER BY created_at DESC`, userId);
-            return rows;
+            const rows = await prisma.$queryRawUnsafe(`
+                SELECT * FROM public.services 
+                WHERE user_id = $1::uuid 
+                ORDER BY created_at DESC 
+                LIMIT $2 OFFSET $3
+            `, userId, Number(limit), Number(offset));
+
+            const countRes = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as cnt FROM public.services WHERE user_id = $1::uuid`, userId);
+            const count = Number(countRes[0]?.cnt || 0);
+
+            return { data: rows, count };
         } catch (e) {
             console.error(e);
             return reply.code(500).send({ error: 'Database error' });
