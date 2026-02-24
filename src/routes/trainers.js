@@ -83,10 +83,30 @@ module.exports = async function trainersRoutes(fastify) {
 
             if (!rows.length) return reply.code(404).send({ error: 'Trainer not found' });
 
+            const r = rows[0];
+
+            // Access control for hidden listings
+            if (!r.visible) {
+                let isOwner = false;
+                try {
+                    const auth = req.headers.authorization || '';
+                    if (auth.startsWith('Bearer ')) {
+                        const token = auth.slice(7);
+                        const payload = fastify.jwt.verify(token);
+                        if (payload.sub === r.user_id) {
+                            isOwner = true;
+                        }
+                    }
+                } catch (e) { }
+
+                if (!isOwner) {
+                    return reply.code(404).send({ error: 'Trainer not found' });
+                }
+            }
+
             // Increment views count asynchronously
             prisma.$queryRawUnsafe(`UPDATE public.trainers SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1::uuid`, id).catch(e => console.error('Error incrementing views:', e));
 
-            const r = rows[0];
             return {
                 ...r,
                 profiles: {

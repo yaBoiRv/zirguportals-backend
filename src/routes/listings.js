@@ -185,10 +185,29 @@ module.exports = async function listingsRoutes(fastify) {
             );
             if (!rows.length) return reply.code(404).send({ error: 'Listing not found' });
 
+            const r = rows[0];
+
+            // Access control for hidden listings
+            if (!r.visible) {
+                let isOwner = false;
+                try {
+                    const auth = req.headers.authorization || '';
+                    if (auth.startsWith('Bearer ')) {
+                        const token = auth.slice(7);
+                        const payload = fastify.jwt.verify(token);
+                        if (payload.sub === r.user_id) {
+                            isOwner = true;
+                        }
+                    }
+                } catch (e) { }
+
+                if (!isOwner) {
+                    return reply.code(404).send({ error: 'Listing not found' });
+                }
+            }
+
             // Increment views count asynchronously
             prisma.$queryRawUnsafe(`UPDATE public.horse_listings SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1::uuid`, id).catch(e => console.error('Error incrementing views:', e));
-
-            const r = rows[0];
 
             const colors = await prisma.$queryRawUnsafe(
                 `SELECT c.* FROM public.horse_colors c JOIN public.horse_listing_colors lc ON lc.color_id = c.id WHERE lc.listing_id = $1::uuid`,
@@ -427,10 +446,29 @@ module.exports = async function listingsRoutes(fastify) {
             );
             if (!rows.length) return reply.code(404).send({ error: 'Listing not found' });
 
+            const r = rows[0];
+
+            // Access control for hidden listings
+            if (!r.visible) {
+                let isOwner = false;
+                try {
+                    const auth = req.headers.authorization || '';
+                    if (auth.startsWith('Bearer ')) {
+                        const token = auth.slice(7);
+                        const payload = fastify.jwt.verify(token);
+                        if (payload.sub === r.user_id) {
+                            isOwner = true;
+                        }
+                    }
+                } catch (e) { }
+
+                if (!isOwner) {
+                    return reply.code(404).send({ error: 'Listing not found' });
+                }
+            }
+
             // Increment views count asynchronously
             prisma.$queryRawUnsafe(`UPDATE public.equipment_listings SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1::uuid`, id).catch(e => console.error('Error incrementing views:', e));
-
-            const r = rows[0];
 
             const colors = await prisma.$queryRawUnsafe(
                 `SELECT c.* FROM public.equipment_colors c JOIN public.equipment_listing_colors lc ON lc.color_id = c.id WHERE lc.listing_id = $1::uuid`,
