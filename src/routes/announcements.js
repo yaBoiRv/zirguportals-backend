@@ -130,6 +130,10 @@ module.exports = async function announcementsRoutes(fastify) {
                 console.log(`[AnnouncementDebug] Found ${allUsers.length} total users to check`);
 
                 const notifications = allUsers
+                    .filter(u => {
+                        const prefs = u.profile?.notificationPreferences || {};
+                        return prefs.new_announcements !== false; // Default to true
+                    })
                     .map(u => ({
                         user_id: u.id,
                         type: 'new_announcement',

@@ -1001,27 +1001,30 @@ const start = async () => {
           console.log(`[ChatDebug] Found ${participants.length} other participants.`);
 
           for (const p of participants) {
-            try {
-              await prisma.notifications.create({
-                data: {
-                  user_id: p.userId,
-                  type: 'new_message',
-                  title: 'New chat message',
-                  content: 'You have a new message',
-                  source_type: 'chat',
-                  source_id: conversationId,
-                  source_user_id: socket.user.id
-                }
-              });
-            } catch (notifErr) {
-              fastify.log.error(notifErr, "Failed to create chat notification");
-            }
-
             const profile = p.user;
             const actualUser = p.user?.user;
 
             const prefs = profile?.notificationPreferences || {};
             const lang = profile?.defaultLanguage || 'en';
+
+            try {
+              if (prefs.chat_messages !== false) {
+                await prisma.notifications.create({
+                  data: {
+                    user_id: p.userId,
+                    type: 'new_message',
+                    title: 'New chat message',
+                    content: 'You have a new message',
+                    source_type: 'chat',
+                    source_id: conversationId,
+                    source_user_id: socket.user.id
+                  }
+                });
+              }
+            } catch (notifErr) {
+              fastify.log.error(notifErr, "Failed to create chat notification");
+            }
+
             // Default chat_messages to true if undefined
             console.log(`[ChatDebug] Processing participant ${p.userId}. Prefs: chat_messages=${prefs.chat_messages}`);
             if (actualUser?.email && (prefs.chat_messages_email ?? prefs.chat_messages ?? true) !== false) {
@@ -1182,17 +1185,25 @@ const start = async () => {
               const item = await prisma[table].findUnique({ where: { id } });
               if (item && item.user_id && item.user_id !== req.user.id) {
                 try {
-                  await prisma.notifications.create({
-                    data: {
-                      user_id: item.user_id,
-                      type: 'listing_favorited',
-                      title: 'Listing favorited',
-                      content: `Someone favorited your listing`,
-                      source_type: normalizedType === 'equipment' ? 'equipment' : 'horse',
-                      source_id: id,
-                      source_user_id: req.user.id
-                    }
+                  const ownerProfile = await prisma.user.findUnique({
+                    where: { id: item.user_id },
+                    include: { profile: true }
                   });
+                  const prefs = ownerProfile?.profile?.notificationPreferences || {};
+
+                  if (prefs.favorites !== false) {
+                    await prisma.notifications.create({
+                      data: {
+                        user_id: item.user_id,
+                        type: 'listing_favorited',
+                        title: 'Listing favorited',
+                        content: `Someone favorited your listing`,
+                        source_type: normalizedType === 'equipment' ? 'equipment' : 'horse',
+                        source_id: id,
+                        source_user_id: req.user.id
+                      }
+                    });
+                  }
                 } catch (e) { fastify.log.error(e, "Failed to create fav notification"); }
 
                 const owner = await prisma.user.findUnique({
@@ -1247,17 +1258,25 @@ const start = async () => {
               const item = await prisma.services.findUnique({ where: { id } });
               if (item && item.user_id && item.user_id !== req.user.id) {
                 try {
-                  await prisma.notifications.create({
-                    data: {
-                      user_id: item.user_id,
-                      type: 'service_favorited',
-                      title: 'Service favorited',
-                      content: `Someone favorited your service`,
-                      source_type: 'service',
-                      source_id: id,
-                      source_user_id: req.user.id
-                    }
+                  const ownerProfile = await prisma.user.findUnique({
+                    where: { id: item.user_id },
+                    include: { profile: true }
                   });
+                  const prefs = ownerProfile?.profile?.notificationPreferences || {};
+
+                  if (prefs.favorites !== false) {
+                    await prisma.notifications.create({
+                      data: {
+                        user_id: item.user_id,
+                        type: 'service_favorited',
+                        title: 'Service favorited',
+                        content: `Someone favorited your service`,
+                        source_type: 'service',
+                        source_id: id,
+                        source_user_id: req.user.id
+                      }
+                    });
+                  }
                 } catch (e) { fastify.log.error(e, "Failed to create fav notification"); }
 
                 const owner = await prisma.user.findUnique({
@@ -1312,17 +1331,25 @@ const start = async () => {
               const item = await prisma.trainers.findUnique({ where: { id } });
               if (item && item.user_id && item.user_id !== req.user.id) {
                 try {
-                  await prisma.notifications.create({
-                    data: {
-                      user_id: item.user_id,
-                      type: 'trainer_favorited',
-                      title: 'Trainer profile favorited',
-                      content: `Someone favorited your trainer profile`,
-                      source_type: 'trainer',
-                      source_id: id,
-                      source_user_id: req.user.id
-                    }
+                  const ownerProfile = await prisma.user.findUnique({
+                    where: { id: item.user_id },
+                    include: { profile: true }
                   });
+                  const prefs = ownerProfile?.profile?.notificationPreferences || {};
+
+                  if (prefs.favorites !== false) {
+                    await prisma.notifications.create({
+                      data: {
+                        user_id: item.user_id,
+                        type: 'trainer_favorited',
+                        title: 'Trainer profile favorited',
+                        content: `Someone favorited your trainer profile`,
+                        source_type: 'trainer',
+                        source_id: id,
+                        source_user_id: req.user.id
+                      }
+                    });
+                  }
                 } catch (e) { fastify.log.error(e, "Failed to create fav notification"); }
 
                 const owner = await prisma.user.findUnique({
