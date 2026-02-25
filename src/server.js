@@ -369,7 +369,7 @@ fastify.get("/api/auth/google/callback", async (req, reply) => {
     },
   });
 
-  const jwtToken = fastify.jwt.sign({ sub: user.id, email: user.email });
+  const jwtToken = fastify.jwt.sign({ sub: user.id, email: user.email, provider: 'google' });
 
   const web = process.env.APP_WEB_URL || "http://localhost:5173";
   return reply.redirect(`${web}/auth/callback?token=${encodeURIComponent(jwtToken)}`);
@@ -442,7 +442,7 @@ fastify.get("/auth/google/callback", async (req, reply) => {
     },
   });
 
-  const jwtToken = fastify.jwt.sign({ sub: user.id, email: user.email });
+  const jwtToken = fastify.jwt.sign({ sub: user.id, email: user.email, provider: 'google' });
 
   const web = process.env.APP_WEB_URL || "http://localhost:5173";
   return reply.redirect(`${web}/auth/callback?token=${encodeURIComponent(jwtToken)}`);
@@ -1024,7 +1024,7 @@ const start = async () => {
             const lang = profile?.defaultLanguage || 'en';
             // Default chat_messages to true if undefined
             console.log(`[ChatDebug] Processing participant ${p.userId}. Prefs: chat_messages=${prefs.chat_messages}`);
-            if (actualUser?.email && prefs.chat_messages !== false) {
+            if (actualUser?.email && (prefs.chat_messages_email ?? prefs.chat_messages ?? true) !== false) {
               console.log(`[ChatDebug] Sending email to ${actualUser.email}`);
               const subject = getTranslation(lang, 'chat_subject');
               const body = getTranslation(lang, 'chat_body');
@@ -1203,7 +1203,7 @@ const start = async () => {
                   const prefs = owner.profile?.notificationPreferences || {};
                   const lang = owner.profile?.defaultLanguage || 'en';
 
-                  if (prefs.favorites !== false) {
+                  if ((prefs.favorites_email ?? prefs.favorites ?? true) !== false) {
                     const subject = getTranslation(lang, 'favorite_listing_subject');
                     const bodyFn = getTranslation(lang, 'favorite_listing_body');
                     const body = typeof bodyFn === 'function' ? bodyFn(item.title || 'Item') : bodyFn;
@@ -1268,7 +1268,7 @@ const start = async () => {
                   const prefs = owner.profile?.notificationPreferences || {};
                   const lang = owner.profile?.defaultLanguage || 'en';
 
-                  if (prefs.favorites !== false) {
+                  if ((prefs.favorites_email ?? prefs.favorites ?? true) !== false) {
                     const subject = getTranslation(lang, 'favorite_service_subject');
                     const bodyFn = getTranslation(lang, 'favorite_service_body');
                     const body = typeof bodyFn === 'function' ? bodyFn(item.full_name) : bodyFn;
@@ -1333,7 +1333,7 @@ const start = async () => {
                   const prefs = owner.profile?.notificationPreferences || {};
                   const lang = owner.profile?.defaultLanguage || 'en';
 
-                  if (prefs.favorites !== false) {
+                  if ((prefs.favorites_email ?? prefs.favorites ?? true) !== false) {
                     const subject = getTranslation(lang, 'favorite_trainer_subject');
                     const bodyFn = getTranslation(lang, 'favorite_trainer_body');
                     const body = typeof bodyFn === 'function' ? bodyFn(item.name) : bodyFn;

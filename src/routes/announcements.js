@@ -155,7 +155,7 @@ module.exports = async function announcementsRoutes(fastify) {
 
                             console.log(`[AnnouncementEmail] Checking user ${u.id} (${u.email}). Prefs: new_announcements_email=${prefs.new_announcements_email}`);
 
-                            if (u.email && prefs.new_announcements_email !== false) {
+                            if (u.email && (prefs.new_announcements_email ?? prefs.new_announcements ?? true) !== false) {
                                 console.log(`[AnnouncementEmail] Sending to ${u.email}...`);
                                 const subjectFn = getTranslation(lang, 'new_announcement_subject');
                                 const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;

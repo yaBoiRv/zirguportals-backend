@@ -377,7 +377,7 @@ module.exports = async function forumRoutes(fastify) {
 
                         const prefs = recipient?.profile?.notificationPreferences || {};
                         const lang = recipient?.profile?.defaultLanguage || 'en';
-                        const shouldSend = recipient?.email && prefs.forum_replies !== false;
+                        const shouldSend = recipient?.email && (prefs.forum_replies_email ?? prefs.forum_replies ?? true) !== false;
 
                         // Check explicit false (default true)
                         if (shouldSend) {
