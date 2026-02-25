@@ -160,13 +160,16 @@ module.exports = async function chatRoutes(fastify) {
 
             return {
                 id: c.id,
-                createdAt: c.createdAt,
-                updatedAt: c.updatedAt,
+                created_at: c.createdAt,
+                updated_at: c.updatedAt,
                 // participants: c.participants.map((p) => p.user),
                 participant_1_id: c.participants[0]?.user.userId,
                 participant_2_id: c.participants[1]?.user.userId,
 
-                lastMessage: c.messages[0] || null,
+                last_message: c.messages[0] ? {
+                    message: c.messages[0].content,
+                    created_at: c.messages[0].createdAt
+                } : null,
                 other_participant: other ? { username: other.username || other.name || "User", avatar_url: other.avatarUrl } : null,
                 source_type: c.sourceType,
                 source_id: c.sourceId,
@@ -180,7 +183,7 @@ module.exports = async function chatRoutes(fastify) {
         // We only want to show empty chats to the initiator (buyer) so they can send the first message.
         const filteredOut = out.filter(c => {
             // If there are messages, always show
-            if (c.lastMessage) return true;
+            if (c.last_message) return true;
 
             // If no messages (empty chat):
             // Hide if I am the listing owner (I didn't start it, and nothing is said yet)

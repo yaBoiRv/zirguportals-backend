@@ -975,6 +975,12 @@ const start = async () => {
             include: { sender: { select: { id: true, userId: true, name: true, username: true, avatarUrl: true } } },
           });
 
+          // Bump conversation updatedAt so it appears at the top of the chat list
+          await prisma.conversation.update({
+            where: { id: conversationId },
+            data: { updatedAt: new Date() }
+          });
+
           // Send back to clients (parse attachments back to objects for frontend convenience if needed, 
           // but frontend expects what it gets from DB usually. 
           // Actually, let's send the objects directly in the socket event so frontend doesn't need to parse strings immediately)
