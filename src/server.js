@@ -250,6 +250,10 @@ fastify.delete("/api/profile/me", { preHandler: requireAuth }, async (req, reply
   try {
     const userId = req.user.id;
 
+    // Retain forum topics and replies as "Deleted user" by setting user_id to NULL
+    await prisma.$executeRaw`UPDATE public.forum_topics SET user_id = NULL WHERE user_id = ${userId}::uuid`;
+    await prisma.$executeRaw`UPDATE public.forum_replies SET user_id = NULL WHERE user_id = ${userId}::uuid`;
+
     // Delete the auth user. Your DB has:
     // profiles.user_id -> auth.users(id) ON DELETE CASCADE
     // and many tables reference profiles(user_id) with cascade.
@@ -261,7 +265,7 @@ fastify.delete("/api/profile/me", { preHandler: requireAuth }, async (req, reply
     return reply.code(204).send();
   } catch (e) {
     req.log.error(e);
-    return reply.code(500).send({ error: "failed_to_delete_account" });
+    return reply.code(500).send({ error: "failed_to_delete_account", details: e.message || String(e) });
   }
 });
 
@@ -931,12 +935,17 @@ fastify.patch("/profile/me", { preHandler: requireAuth }, async (req, reply) => 
 fastify.delete("/profile/me", { preHandler: requireAuth }, async (req, reply) => {
   try {
     const userId = req.user.id;
+
+    // Retain forum topics and replies as "Deleted user" by setting user_id to NULL
+    await prisma.$executeRaw`UPDATE public.forum_topics SET user_id = NULL WHERE user_id = ${userId}::uuid`;
+    await prisma.$executeRaw`UPDATE public.forum_replies SET user_id = NULL WHERE user_id = ${userId}::uuid`;
+
     await prisma.profile.delete({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
     return reply.send({ success: true });
   } catch (e) {
     req.log.error(e);
-    return reply.code(500).send({ error: "failed_to_delete_profile" });
+    return reply.code(500).send({ error: "failed_to_delete_profile", details: e.message || String(e) });
   }
 });
 
