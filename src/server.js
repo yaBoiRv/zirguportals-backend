@@ -254,6 +254,14 @@ fastify.delete("/api/profile/me", { preHandler: requireAuth }, async (req, reply
     await prisma.$executeRaw`UPDATE public.forum_topics SET user_id = NULL WHERE user_id = ${userId}::uuid`;
     await prisma.$executeRaw`UPDATE public.forum_replies SET user_id = NULL WHERE user_id = ${userId}::uuid`;
 
+    // Detach from conversations (participants and sender_id in messages/trainer chats)
+    await prisma.$executeRaw`DELETE FROM public.conversation_participants WHERE user_id = ${userId}::uuid`;
+    // We can't delete messages without breaking conversations, but we can't set sender_id to NULL if it's required.
+    // However, if the user account is deleted and messages remain, we can either set them to a system UID or just delete them.
+    // Let's delete the user's messages to avoid FK errors:
+    await prisma.$executeRaw`DELETE FROM public.messages WHERE sender_id = ${userId}::uuid`;
+    await prisma.$executeRaw`DELETE FROM public.trainer_chats WHERE sender_id = ${userId}::uuid OR client_user_id = ${userId}::uuid`;
+
     // Delete the auth user. Your DB has:
     // profiles.user_id -> auth.users(id) ON DELETE CASCADE
     // and many tables reference profiles(user_id) with cascade.
@@ -939,6 +947,11 @@ fastify.delete("/profile/me", { preHandler: requireAuth }, async (req, reply) =>
     // Retain forum topics and replies as "Deleted user" by setting user_id to NULL
     await prisma.$executeRaw`UPDATE public.forum_topics SET user_id = NULL WHERE user_id = ${userId}::uuid`;
     await prisma.$executeRaw`UPDATE public.forum_replies SET user_id = NULL WHERE user_id = ${userId}::uuid`;
+
+    // Detach from conversations
+    await prisma.$executeRaw`DELETE FROM public.conversation_participants WHERE user_id = ${userId}::uuid`;
+    await prisma.$executeRaw`DELETE FROM public.messages WHERE sender_id = ${userId}::uuid`;
+    await prisma.$executeRaw`DELETE FROM public.trainer_chats WHERE sender_id = ${userId}::uuid OR client_user_id = ${userId}::uuid`;
 
     await prisma.profile.delete({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
