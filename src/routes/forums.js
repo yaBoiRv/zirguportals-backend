@@ -131,9 +131,9 @@ module.exports = async function forumRoutes(fastify) {
                 data: items.map(t => ({
                     ...t,
                     author: {
-                        name: t.user?.profile?.name,
-                        username: t.user?.profile?.username,
-                        avatar_url: t.user?.profile?.avatarUrl
+                        name: t.user?.profile?.name || 'Deleted user',
+                        username: t.user?.profile?.username || 'deleted_user',
+                        avatar_url: t.user?.profile?.avatarUrl || null
                     },
                     files: t.files ? t.files.map(parseFile) : [],
                     replies_count: t._count.replies,
@@ -232,9 +232,9 @@ module.exports = async function forumRoutes(fastify) {
             return {
                 ...topic,
                 author: {
-                    name: topic.user?.profile?.name,
-                    username: topic.user?.profile?.username,
-                    avatar_url: topic.user?.profile?.avatarUrl
+                    name: topic.user?.profile?.name || 'Deleted user',
+                    username: topic.user?.profile?.username || 'deleted_user',
+                    avatar_url: topic.user?.profile?.avatarUrl || null
                 },
                 files: topic.files ? topic.files.map(parseFile) : [],
                 replies_count: topic._count.replies,
@@ -270,11 +270,11 @@ module.exports = async function forumRoutes(fastify) {
 
             return replies.map(r => ({
                 ...r,
-                profiles: r.user?.profile ? {
-                    name: r.user.profile.name,
-                    username: r.user.profile.username,
-                    avatar_url: r.user.profile.avatarUrl
-                } : null,
+                profiles: {
+                    name: r.user?.profile?.name || 'Deleted user',
+                    username: r.user?.profile?.username || 'deleted_user',
+                    avatar_url: r.user?.profile?.avatarUrl || null
+                },
                 reply_to_profile: null,
                 files: r.files ? r.files.map(parseFile) : [],
                 likes_count: r._count.likes
@@ -413,11 +413,11 @@ module.exports = async function forumRoutes(fastify) {
             return {
                 ...replyRecord,
                 files: replyRecord.files.map(parseFile),
-                profiles: replyRecord.user?.profile ? {
-                    name: replyRecord.user.profile.name,
-                    username: replyRecord.user.profile.username,
-                    avatar_url: replyRecord.user.profile.avatarUrl
-                } : null
+                profiles: {
+                    name: replyRecord.user?.profile?.name || 'Deleted user',
+                    username: replyRecord.user?.profile?.username || 'deleted_user',
+                    avatar_url: replyRecord.user?.profile?.avatarUrl || null
+                }
             };
         } catch (e) {
             console.error(e);

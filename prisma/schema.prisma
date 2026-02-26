@@ -509,7 +509,7 @@ model ForumTopic {
   title         String
   content       String
   category      String?       @default("general")
-  userId        String        @map("user_id") @db.Uuid
+  userId        String?       @map("user_id") @db.Uuid
   createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   likesCount    Int?          @default(0) @map("likes_count")
@@ -523,7 +523,7 @@ model ForumTopic {
   likes         ForumLike[]
   replies       ForumReply[]
   forum_groups  forum_groups? @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@map("forum_topics")
   @@schema("public")
@@ -533,7 +533,7 @@ model ForumReply {
   id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   topicId    String       @map("topic_id") @db.Uuid
   content    String
-  userId     String       @map("user_id") @db.Uuid
+  userId     String?      @map("user_id") @db.Uuid
   createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   likesCount Int?         @default(0) @map("likes_count")
@@ -544,7 +544,7 @@ model ForumReply {
   parent     ForumReply?  @relation("ReplyToReply", fields: [parentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   children   ForumReply[] @relation("ReplyToReply")
   topic      ForumTopic   @relation(fields: [topicId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([parentId], map: "idx_forum_replies_parent_id")
   @@map("forum_replies")
