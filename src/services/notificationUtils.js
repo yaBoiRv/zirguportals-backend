@@ -41,9 +41,9 @@ async function broadcastNewListing(prisma, type, b, listingId, userId) {
         (async () => {
             for (const r of allUsers) {
                 const prefs = r.profile?.notificationPreferences || {};
-                const emailEnabled = prefs.new_listings_email ?? prefs.new_listings ?? true;
+                const emailEnabled = prefs.new_listings_email ?? prefs.new_listings ?? false;
 
-                if (r.email && emailEnabled !== false) {
+                if (r.email && emailEnabled === true) {
                     const lang = r.profile?.defaultLanguage || 'en';
 
                     const subjectFn = getTranslation(lang, subjectKey);

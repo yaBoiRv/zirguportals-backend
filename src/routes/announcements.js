@@ -132,7 +132,7 @@ module.exports = async function announcementsRoutes(fastify) {
                 const notifications = allUsers
                     .filter(u => {
                         const prefs = u.profile?.notificationPreferences || {};
-                        return prefs.new_announcements !== false; // Default to true
+                        return prefs.new_announcements === true; // Default to false
                     })
                     .map(u => ({
                         user_id: u.id,
@@ -159,7 +159,7 @@ module.exports = async function announcementsRoutes(fastify) {
 
                             console.log(`[AnnouncementEmail] Checking user ${u.id} (${u.email}). Prefs: new_announcements_email=${prefs.new_announcements_email}`);
 
-                            if (u.email && (prefs.new_announcements_email ?? prefs.new_announcements ?? true) !== false) {
+                            if (u.email && (prefs.new_announcements_email ?? prefs.new_announcements ?? false) === true) {
                                 console.log(`[AnnouncementEmail] Sending to ${u.email}...`);
                                 const subjectFn = getTranslation(lang, 'new_announcement_subject');
                                 const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;

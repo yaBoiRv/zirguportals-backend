@@ -86,7 +86,7 @@ model Profile {
   updatedAt               DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   username                String?              @unique
   hasTrainerProfile       Boolean?             @default(false) @map("has_trainer_profile")
-  notificationPreferences Json?                @default("{\"favorites\": true, \"new_listings\": true, \"chat_messages\": true, \"first_login_done\": false}") @map("notification_preferences")
+  notificationPreferences Json?                @default("{\"favorites\": false, \"new_listings\": false, \"chat_messages\": false, \"first_login_done\": false}") @map("notification_preferences")
   defaultLanguage         String?              @default("en") @map("default_language")
   announcements           Announcements[]
   blog_posts              blog_posts[]
