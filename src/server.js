@@ -170,7 +170,8 @@ fastify.get("/api/profile/me", { preHandler: requireAuth }, async (req, reply) =
     include: {
       user: {
         select: {
-          user_roles: true
+          user_roles: true,
+          is_sso_user: true
         }
       }
     }
@@ -184,6 +185,7 @@ fastify.get("/api/profile/me", { preHandler: requireAuth }, async (req, reply) =
     ...profile,
     role: primaryRole,
     roles: roles, // also return full list
+    is_sso_user: profile.user?.is_sso_user || false,
     user: undefined // remove nested user object
   };
 
@@ -344,7 +346,13 @@ fastify.get("/api/auth/google/callback", async (req, reply) => {
         email,
         passwordHash: await argon2.hash(crypto.randomUUID()), // random, unused
         emailVerified: true,
+        is_sso_user: true,
       },
+    });
+  } else if (!user.is_sso_user) {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { is_sso_user: true },
     });
   }
 
@@ -417,7 +425,13 @@ fastify.get("/auth/google/callback", async (req, reply) => {
         email,
         passwordHash: await argon2.hash(crypto.randomUUID()), // random, unused
         emailVerified: true,
+        is_sso_user: true,
       },
+    });
+  } else if (!user.is_sso_user) {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { is_sso_user: true },
     });
   }
 
@@ -723,6 +737,99 @@ fastify.post(
   }
 );
 
+fastify.post(
+  "/api/auth/forgot-password",
+  { config: { rateLimit: { max: 5, timeWindow: "15 minutes" } } },
+  async (req, reply) => {
+    const { email, lang: reqLang } = req.body || {};
+    if (!email) return reply.code(400).send({ error: "email required" });
+
+    const safeEmail = String(email).trim().toLowerCase();
+
+    // Include profile to check language for localized emails
+    const user = await prisma.user.findUnique({
+      where: { email: safeEmail },
+      include: { profile: true }
+    });
+
+    if (!user) return reply.send({ success: true });
+
+    const lang = reqLang || user.profile?.defaultLanguage || 'en';
+
+    // If Google SSO user, send alternate email
+    if (user.is_sso_user) {
+      const subject = getTranslation(lang, 'sso_password_reset_subject') || "Horse Portal Login Info";
+      const body = getTranslation(lang, 'sso_password_reset_body') || "You requested a password reset, but you created this account using Google. Please return to Horse Portal and click the 'Continue with Google' button to log in.";
+      const linkText = getTranslation(lang, 'sso_login_btn') || "Return to Website";
+      const linkUrl = process.env.APP_WEB_URL || "http://localhost:5173";
+
+      sendEmail({
+        to: user.email,
+        subject: subject,
+        html: `<p>${body}</p><p><a href="${linkUrl}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px;">${linkText}</a></p>`
+      });
+
+      return reply.send({ success: true });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        recovery_token: token,
+        recovery_sent_at: new Date()
+      }
+    });
+
+    const subject = getTranslation(lang, 'forgot_password_subject');
+    const body = getTranslation(lang, 'forgot_password_body');
+    const linkText = getTranslation(lang, 'reset_password_btn');
+    const linkUrl = `${process.env.APP_WEB_URL || "http://localhost:5173"}/${lang}/reset-password?token=${token}`;
+
+    sendEmail({
+      to: user.email,
+      subject: subject,
+      html: `<p>${body}</p><p><a href="${linkUrl}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px;">${linkText}</a></p>`
+    });
+
+    return reply.send({ success: true });
+  }
+);
+
+fastify.post(
+  "/api/auth/reset-password",
+  { config: { rateLimit: { max: 5, timeWindow: "15 minutes" } } },
+  async (req, reply) => {
+    const { token, password } = req.body || {};
+    if (!token || !password) return reply.code(400).send({ error: "token and password required" });
+
+    const user = await prisma.user.findFirst({
+      where: { recovery_token: token }
+    });
+
+    if (!user) return reply.code(400).send({ error: "invalid or expired token" });
+
+    const expiration = 60 * 60 * 1000;
+    if (new Date() - new Date(user.recovery_sent_at) > expiration) {
+      return reply.code(400).send({ error: "invalid or expired token" });
+    }
+
+    const passwordHash = await argon2.hash(password);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        recovery_token: null,
+        recovery_sent_at: null
+      } // Invalidate token after consumption
+    });
+
+    return reply.send({ success: true });
+  }
+);
+
 // ========== Routes without /api prefix (for nginx proxy) ==========
 
 // Profile routes (nginx strips /api)
@@ -747,9 +854,28 @@ fastify.get("/profile/me", { preHandler: requireAuth }, async (req, reply) => {
         first_login_done: false,
       },
     },
+    include: {
+      user: {
+        select: {
+          user_roles: true,
+          is_sso_user: true
+        }
+      }
+    }
   });
 
-  return reply.send({ profile });
+  const roles = profile.user?.user_roles?.map(r => r.role) || [];
+  const primaryRole = roles.length > 0 ? roles[0] : 'user';
+
+  const profileWithRole = {
+    ...profile,
+    role: primaryRole,
+    roles: roles,
+    is_sso_user: profile.user?.is_sso_user || false,
+    user: undefined
+  };
+
+  return reply.send({ profile: profileWithRole });
 });
 
 fastify.patch("/profile/me", { preHandler: requireAuth }, async (req, reply) => {

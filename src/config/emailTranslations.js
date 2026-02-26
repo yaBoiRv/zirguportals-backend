@@ -32,7 +32,15 @@ const translations = {
         new_service_subject: (title) => `New Service: ${title}`,
         new_service_body: (title) => `A new service listing has been posted: <strong>${title}</strong>`,
         new_trainer_subject: (title) => `New Trainer Profile: ${title}`,
-        new_trainer_body: (title) => `A new trainer profile has been created: <strong>${title}</strong>`
+        new_trainer_body: (title) => `A new trainer profile has been created: <strong>${title}</strong>`,
+
+        forgot_password_subject: "Password Reset Request",
+        forgot_password_body: "You recently requested to reset your password for your Horse Portal account. Click the button below to reset it. This link is only valid for 1 hour. If you did not request a password reset, please ignore this email.",
+        reset_password_btn: "Reset Password",
+
+        sso_password_reset_subject: "Horse Portal Login Info",
+        sso_password_reset_body: "You requested a password reset, but you created this account using Google. Please return to Horse Portal and click the 'Continue with Google' button to log in.",
+        sso_login_btn: "Return to Website",
     },
     lv: {
         forum_reply_subject: "Jauna atbilde jūsu tēmā",
@@ -67,7 +75,15 @@ const translations = {
         new_service_subject: (title) => `Jauns pakalpojums: ${title}`,
         new_service_body: (title) => `Pievienots jauns pakalpojums: <strong>${title}</strong>`,
         new_trainer_subject: (title) => `Jauns treneris: ${title}`,
-        new_trainer_body: (title) => `Izveidots jauns trenera profils: <strong>${title}</strong>`
+        new_trainer_body: (title) => `Izveidots jauns trenera profils: <strong>${title}</strong>`,
+
+        forgot_password_subject: "Paroles atiestatīšanas pieprasījums",
+        forgot_password_body: "Jūs nesen pieprasījāt atiestatīt savu Horse Portal konta paroli. Noklikšķiniet uz zemāk esošās pogas, lai to atiestatītu. Šī saite ir derīga tikai 1 stundu. Ja neesat pieprasījis paroles atiestatīšanu, lūdzu, ignorējiet šo e-pastu.",
+        reset_password_btn: "Atiestatīt paroli",
+
+        sso_password_reset_subject: "Horse Portal pieteikšanās informācija",
+        sso_password_reset_body: "Jūs pieprasījāt paroles atiestatīšanu, taču šis konts tika izveidots, izmantojot Google. Lūdzu, atgriezieties Horse Portal un noklikšķiniet uz pogas 'Turpināt ar Google', lai pieteiktos.",
+        sso_login_btn: "Atgriezties mājaslapā",
     },
     ru: {
         forum_reply_subject: "Новый ответ в вашей теме",
@@ -102,7 +118,15 @@ const translations = {
         new_service_subject: (title) => `Новая услуга: ${title}`,
         new_service_body: (title) => `Добавлена новая услуга: <strong>${title}</strong>`,
         new_trainer_subject: (title) => `Новый тренер: ${title}`,
-        new_trainer_body: (title) => `Создан новый профиль тренера: <strong>${title}</strong>`
+        new_trainer_body: (title) => `Создан новый профиль тренера: <strong>${title}</strong>`,
+
+        forgot_password_subject: "Запрос на сброс пароля",
+        forgot_password_body: "Вы недавно запросили сброс пароля для вашей учетной записи на Horse Portal. Нажмите на кнопку ниже, чтобы сбросить его. Эта ссылка действительна только 1 час. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.",
+        reset_password_btn: "Сбросить пароль",
+
+        sso_password_reset_subject: "Информация для входа на Horse Portal",
+        sso_password_reset_body: "Вы запросили сброс пароля, но эта учетная запись была создана с помощью Google. Пожалуйста, вернитесь на Horse Portal и нажмите кнопку 'Продолжить с Google' для входа.",
+        sso_login_btn: "Вернуться на сайт",
     },
     ee: {
         forum_reply_subject: "Uus vastus teie teemale",
@@ -137,7 +161,15 @@ const translations = {
         new_service_subject: (title) => `Uus teenus: ${title}`,
         new_service_body: (title) => `Lisati uus teenus: <strong>${title}</strong>`,
         new_trainer_subject: (title) => `Uus treener: ${title}`,
-        new_trainer_body: (title) => `Loodi uus treeneri profiil: <strong>${title}</strong>`
+        new_trainer_body: (title) => `Loodi uus treeneri profiil: <strong>${title}</strong>`,
+
+        forgot_password_subject: "Parooli lähtestamise taotlus",
+        forgot_password_body: "Te taotlesite hiljuti oma Horse Portal konto parooli lähtestamist. Klõpsake allpool oleval nupul uue parooli määramiseks. See link on kehtiv ainult 1 tund. Kui te ei ole parooli lähtestamist taotlenud, palun ignoreerige seda e-kirja.",
+        reset_password_btn: "Lähtesta parool",
+
+        sso_password_reset_subject: "Horse Portal sisselogimise teave",
+        sso_password_reset_body: "Te taotlesite parooli lähtestamist, kuid see konto loodi Google'i kaudu. Palun minge tagasi Horse Portalisse ja klõpsake sisselogimiseks nuppu 'Jätka Google'iga'.",
+        sso_login_btn: "Tagasi veebilehele",
     },
     lt: {
         forum_reply_subject: "Naujas atsakymas jūsų temoje",
@@ -172,7 +204,15 @@ const translations = {
         new_service_subject: (title) => `Nauja paslauga: ${title}`,
         new_service_body: (title) => `Įdėta nauja paslauga: <strong>${title}</strong>`,
         new_trainer_subject: (title) => `Naujas treneris: ${title}`,
-        new_trainer_body: (title) => `Sukurtas naujas trenerio profilis: <strong>${title}</strong>`
+        new_trainer_body: (title) => `Sukurtas naujas trenerio profilis: <strong>${title}</strong>`,
+
+        forgot_password_subject: "Slaptažodžio keitimo prašymas",
+        forgot_password_body: "Neseniai paprašėte pakeisti „Horse Portal“ paskyros slaptažodį. Paspauskite žemiau esantį mygtuką, norėdami jį pakeisti. Ši nuoroda galioja tik 1 valandą. Jei neprašėte pakeisti slaptažodžio, tiesiog ignoruokite šį el. laišką.",
+        reset_password_btn: "Pakeisti slaptažodį",
+
+        sso_password_reset_subject: "Horse Portal prisijungimo informacija",
+        sso_password_reset_body: "Paprašėte pakeisti slaptažodį, tačiau ši paskyra buvo sukurta naudojant „Google“. Grįžkite į „Horse Portal“ ir spustelėkite mygtuką „Tęsti su Google“, kad prisijungtumėte.",
+        sso_login_btn: "Grįžti į svetainę",
     }
 };
 
