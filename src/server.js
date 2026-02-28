@@ -677,7 +677,7 @@ fastify.post(
   "/api/auth/register",
   { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } },
   async (req, reply) => {
-    const { email, password } = req.body || {};
+    const { email, password, name } = req.body || {};
     if (!email || !password) {
       return reply.code(400).send({ error: "email and password required" });
     }
@@ -702,7 +702,7 @@ fastify.post(
         update: {}, // (you can update defaults later if you want)
         create: {
           userId: user.id,
-          name: safeEmail.split("@")[0] || "",
+          name: name || safeEmail.split("@")[0] || "",
           username: null,
           avatarUrl: null,
           phone: null,
@@ -990,7 +990,7 @@ fastify.post(
         update: {},
         create: {
           userId: user.id,
-          name: safeEmail.split("@")[0] || "",
+          name: req.body.name || safeEmail.split("@")[0] || "",
           username: null,
           avatarUrl: null,
           phone: null,
