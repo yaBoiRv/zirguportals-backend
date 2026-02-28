@@ -948,10 +948,10 @@ fastify.patch("/profile/me", { preHandler: requireAuth }, async (req, reply) => 
     return reply.send({ profile });
   } catch (e) {
     req.log.error(e);
-    if (e.code === 'P2002' && e.meta?.target?.includes('username')) {
+    if (e.code === 'P2002') {
       return reply.code(400).send({ error: "username_taken", message: "Username is already taken" });
     }
-    return reply.code(500).send({ error: "failed_to_update_profile" });
+    return reply.code(500).send({ error: "failed_to_update_profile", message: e.message });
   }
 });
 
