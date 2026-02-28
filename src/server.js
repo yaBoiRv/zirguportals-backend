@@ -371,7 +371,9 @@ fastify.get("/api/auth/google/callback", async (req, reply) => {
   // Ensure profile exists
   await prisma.profile.upsert({
     where: { userId: user.id },
-    update: {},
+    update: {
+      name: payload.name || email.split("@")[0]
+    },
     create: {
       userId: user.id,
       name: payload.name || email.split("@")[0],
@@ -450,7 +452,9 @@ fastify.get("/auth/google/callback", async (req, reply) => {
   // Ensure profile exists
   await prisma.profile.upsert({
     where: { userId: user.id },
-    update: {},
+    update: {
+      name: payload.name || email.split("@")[0]
+    },
     create: {
       userId: user.id,
       name: payload.name || email.split("@")[0],
@@ -699,7 +703,9 @@ fastify.post(
 
       await tx.profile.upsert({
         where: { userId: user.id },
-        update: {}, // (you can update defaults later if you want)
+        update: {
+          name: name || safeEmail.split("@")[0] || ""
+        },
         create: {
           userId: user.id,
           name: name || safeEmail.split("@")[0] || "",
@@ -903,6 +909,10 @@ fastify.patch("/profile/me", { preHandler: requireAuth }, async (req, reply) => 
   } = req.body || {};
 
   try {
+    if (username && username.toLowerCase() === 'deleted_user') {
+      return reply.code(400).send({ error: "Username 'deleted_user' is reserved and cannot be used." });
+    }
+
     const profile = await prisma.profile.upsert({
       where: { userId },
       update: {
@@ -953,6 +963,9 @@ fastify.delete("/profile/me", { preHandler: requireAuth }, async (req, reply) =>
     await prisma.$executeRaw`DELETE FROM public.messages WHERE sender_id = ${userId}::uuid`;
     await prisma.$executeRaw`DELETE FROM public.trainer_chats WHERE sender_id = ${userId}::uuid OR client_user_id = ${userId}::uuid`;
 
+    // Manually delete horse listings since the foreign key fk_horse_profiles prevents profile deletion
+    await prisma.horse_listings.deleteMany({ where: { user_id: userId } });
+
     await prisma.profile.delete({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
     return reply.send({ success: true });
@@ -987,7 +1000,9 @@ fastify.post(
 
       await tx.profile.upsert({
         where: { userId: user.id },
-        update: {},
+        update: {
+          name: req.body.name || safeEmail.split("@")[0] || ""
+        },
         create: {
           userId: user.id,
           name: req.body.name || safeEmail.split("@")[0] || "",
