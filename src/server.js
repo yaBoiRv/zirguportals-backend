@@ -762,7 +762,7 @@ fastify.post(
       include: { profile: true }
     });
 
-    if (!user) return reply.send({ success: true });
+    if (!user) return reply.code(404).send({ error: "user_not_found", message: "User with this email does not exist." });
 
     const lang = reqLang || user.profile?.defaultLanguage || 'en';
 
@@ -1061,7 +1061,7 @@ fastify.post(
       include: { profile: true }
     });
 
-    if (!user) return reply.send({ success: true });
+    if (!user) return reply.code(404).send({ error: "user_not_found", message: "User with this email does not exist." });
 
     const lang = reqLang || user.profile?.defaultLanguage || 'en';
 
@@ -1072,7 +1072,7 @@ fastify.post(
       const linkText = getTranslation(lang, 'sso_login_btn') || "Return to Website";
       const linkUrl = process.env.APP_WEB_URL || "http://localhost:5173";
 
-      const sendEmail = require('./services/emailService');
+      const { sendEmail } = require('./services/emailService');
       sendEmail({
         to: user.email,
         subject: subject,
@@ -1098,7 +1098,7 @@ fastify.post(
     const linkText = getTranslation(lang, 'reset_password_btn');
     const linkUrl = `${process.env.APP_WEB_URL || "http://localhost:5173"}/${lang}/reset-password?token=${token}`;
 
-    const sendEmail = require('./services/emailService');
+    const { sendEmail } = require('./services/emailService');
     sendEmail({
       to: user.email,
       subject: subject,
