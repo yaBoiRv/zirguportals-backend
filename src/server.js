@@ -388,7 +388,7 @@ fastify.get("/api/auth/google/callback", async (req, reply) => {
     },
   });
 
-  const jwtToken = fastify.jwt.sign({ sub: user.id, email: user.email, provider: 'google' });
+  const jwtToken = fastify.jwt.sign({ sub: user.id, email: user.email, provider: user.is_sso_user ? 'google' : 'email', is_sso_user: user.is_sso_user });
 
   const web = process.env.APP_WEB_URL || "http://localhost:5173";
   return reply.redirect(`${web}/auth/callback?token=${encodeURIComponent(jwtToken)}`);
@@ -464,7 +464,7 @@ fastify.get("/auth/google/callback", async (req, reply) => {
     },
   });
 
-  const jwtToken = fastify.jwt.sign({ sub: user.id, email: user.email, provider: 'google' });
+  const jwtToken = fastify.jwt.sign({ sub: user.id, email: user.email, provider: user.is_sso_user ? 'google' : 'email', is_sso_user: user.is_sso_user });
 
   const web = process.env.APP_WEB_URL || "http://localhost:5173";
   return reply.redirect(`${web}/auth/callback?token=${encodeURIComponent(jwtToken)}`);
