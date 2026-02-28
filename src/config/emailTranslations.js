@@ -41,6 +41,9 @@ const translations = {
         sso_password_reset_subject: "Horse Portal Login Info",
         sso_password_reset_body: "You requested a password reset, but you created this account using Google. Please return to Horse Portal and click the 'Continue with Google' button to log in.",
         sso_login_btn: "Return to Website",
+
+        otp_subject: "Your Verification Code",
+        otp_body: "Your email verification code is:",
     },
     lv: {
         forum_reply_subject: "Jauna atbilde jūsu tēmā",
@@ -84,6 +87,9 @@ const translations = {
         sso_password_reset_subject: "Horse Portal pieteikšanās informācija",
         sso_password_reset_body: "Jūs pieprasījāt paroles atiestatīšanu, taču šis konts tika izveidots, izmantojot Google. Lūdzu, atgriezieties Horse Portal un noklikšķiniet uz pogas 'Turpināt ar Google', lai pieteiktos.",
         sso_login_btn: "Atgriezties mājaslapā",
+
+        otp_subject: "Jūsu verifikācijas kods",
+        otp_body: "Jūsu e-pasta verifikācijas kods ir:",
     },
     ru: {
         forum_reply_subject: "Новый ответ в вашей теме",
@@ -127,6 +133,9 @@ const translations = {
         sso_password_reset_subject: "Информация для входа на Horse Portal",
         sso_password_reset_body: "Вы запросили сброс пароля, но эта учетная запись была создана с помощью Google. Пожалуйста, вернитесь на Horse Portal и нажмите кнопку 'Продолжить с Google' для входа.",
         sso_login_btn: "Вернуться на сайт",
+
+        otp_subject: "Ваш код подтверждения",
+        otp_body: "Ваш код подтверждения электронной почты:",
     },
     ee: {
         forum_reply_subject: "Uus vastus teie teemale",
@@ -170,6 +179,9 @@ const translations = {
         sso_password_reset_subject: "Horse Portal sisselogimise teave",
         sso_password_reset_body: "Te taotlesite parooli lähtestamist, kuid see konto loodi Google'i kaudu. Palun minge tagasi Horse Portalisse ja klõpsake sisselogimiseks nuppu 'Jätka Google'iga'.",
         sso_login_btn: "Tagasi veebilehele",
+
+        otp_subject: "Teie kinnituskood",
+        otp_body: "Teie e-posti kinnituskood on:",
     },
     lt: {
         forum_reply_subject: "Naujas atsakymas jūsų temoje",
@@ -213,6 +225,9 @@ const translations = {
         sso_password_reset_subject: "Horse Portal prisijungimo informacija",
         sso_password_reset_body: "Paprašėte pakeisti slaptažodį, tačiau ši paskyra buvo sukurta naudojant „Google“. Grįžkite į „Horse Portal“ ir spustelėkite mygtuką „Tęsti su Google“, kad prisijungtumėte.",
         sso_login_btn: "Grįžti į svetainę",
+
+        otp_subject: "Jūsų patvirtinimo kodas",
+        otp_body: "Jūsų el. pašto patvirtinimo kodas yra:",
     }
 };
 

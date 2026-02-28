@@ -718,8 +718,67 @@ fastify.post(
       return { user };
     });
 
-    const token = fastify.jwt.sign({ sub: user.id, email: user.email });
-    return reply.send({ user, token });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        confirmation_token: otp,
+        confirmation_sent_at: new Date()
+      }
+    });
+
+    const { sendEmail } = require('./services/emailService');
+    const lang = req.body?.lang || 'en';
+    const { getTranslation } = require('./config/emailTranslations');
+    const subject = getTranslation(lang, 'otp_subject');
+    const bodyText = getTranslation(lang, 'otp_body');
+
+    sendEmail({
+      to: user.email,
+      subject: subject,
+      html: `<p>${bodyText} <strong style="font-size: 24px;">${otp}</strong></p>`
+    });
+
+    return reply.send({ requiresVerification: true, email: user.email });
+  }
+);
+
+fastify.post(
+  "/api/auth/verify-email",
+  { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
+  async (req, reply) => {
+    const { email, code } = req.body || {};
+    if (!email || !code) return reply.code(400).send({ error: "email and code required" });
+
+    const user = await prisma.user.findUnique({
+      where: { email: String(email).trim().toLowerCase() }
+    });
+
+    if (!user) return reply.code(400).send({ error: "user_not_found" });
+
+    if (user.emailVerified) return reply.send({ success: true, emailVerified: true });
+
+    if (user.confirmation_token !== String(code)) {
+      return reply.code(400).send({ error: "invalid_code", message: "Invalid verification code." });
+    }
+
+    const expiration = 15 * 60 * 1000;
+    if (new Date() - new Date(user.confirmation_sent_at) > expiration) {
+      return reply.code(400).send({ error: "code_expired", message: "Verification code has expired." });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        confirmation_token: null,
+        confirmation_sent_at: null
+      }
+    });
+
+    const token = fastify.jwt.sign({ sub: updatedUser.id, email: updatedUser.email });
+    return reply.send({ user: { id: updatedUser.id, email: updatedUser.email, emailVerified: true }, token });
   }
 );
 
@@ -738,6 +797,28 @@ fastify.post(
 
     const ok = await argon2.verify(user.passwordHash, password);
     if (!ok) return reply.code(401).send({ error: "invalid credentials" });
+
+    if (!user.emailVerified) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          confirmation_token: otp,
+          confirmation_sent_at: new Date()
+        }
+      });
+      const { sendEmail } = require('./services/emailService');
+      const lang = req.body?.lang || 'en';
+      const { getTranslation } = require('./config/emailTranslations');
+      const subject = getTranslation(lang, 'otp_subject');
+      const bodyText = getTranslation(lang, 'otp_body');
+      sendEmail({
+        to: user.email,
+        subject: subject,
+        html: `<p>${bodyText} <strong style="font-size: 24px;">${otp}</strong></p>`
+      });
+      return reply.code(403).send({ error: "email_not_verified", message: "Please verify your email address.", requiresVerification: true, email: user.email });
+    }
 
     const token = fastify.jwt.sign({ sub: user.id, email: user.email });
     return reply.send({
@@ -1018,8 +1099,67 @@ fastify.post(
       return { user };
     });
 
-    const token = fastify.jwt.sign({ sub: user.id, email: user.email });
-    return reply.send({ user, token });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        confirmation_token: otp,
+        confirmation_sent_at: new Date()
+      }
+    });
+
+    const { sendEmail } = require('./services/emailService');
+    const lang = req.body?.lang || 'en';
+    const { getTranslation } = require('./config/emailTranslations');
+    const subject = getTranslation(lang, 'otp_subject');
+    const bodyText = getTranslation(lang, 'otp_body');
+
+    sendEmail({
+      to: user.email,
+      subject: subject,
+      html: `<p>${bodyText} <strong style="font-size: 24px;">${otp}</strong></p>`
+    });
+
+    return reply.send({ requiresVerification: true, email: user.email });
+  }
+);
+
+fastify.post(
+  "/auth/verify-email",
+  { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
+  async (req, reply) => {
+    const { email, code } = req.body || {};
+    if (!email || !code) return reply.code(400).send({ error: "email and code required" });
+
+    const user = await prisma.user.findUnique({
+      where: { email: String(email).trim().toLowerCase() }
+    });
+
+    if (!user) return reply.code(400).send({ error: "user_not_found" });
+
+    if (user.emailVerified) return reply.send({ success: true, emailVerified: true });
+
+    if (user.confirmation_token !== String(code)) {
+      return reply.code(400).send({ error: "invalid_code", message: "Invalid verification code." });
+    }
+
+    const expiration = 15 * 60 * 1000;
+    if (new Date() - new Date(user.confirmation_sent_at) > expiration) {
+      return reply.code(400).send({ error: "code_expired", message: "Verification code has expired." });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        confirmation_token: null,
+        confirmation_sent_at: null
+      }
+    });
+
+    const token = fastify.jwt.sign({ sub: updatedUser.id, email: updatedUser.email });
+    return reply.send({ user: { id: updatedUser.id, email: updatedUser.email, emailVerified: true }, token });
   }
 );
 
@@ -1037,6 +1177,28 @@ fastify.post(
 
     const ok = await argon2.verify(user.passwordHash, password);
     if (!ok) return reply.code(401).send({ error: "invalid credentials" });
+
+    if (!user.emailVerified) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          confirmation_token: otp,
+          confirmation_sent_at: new Date()
+        }
+      });
+      const { sendEmail } = require('./services/emailService');
+      const lang = req.body?.lang || 'en';
+      const { getTranslation } = require('./config/emailTranslations');
+      const subject = getTranslation(lang, 'otp_subject');
+      const bodyText = getTranslation(lang, 'otp_body');
+      sendEmail({
+        to: user.email,
+        subject: subject,
+        html: `<p>${bodyText} <strong style="font-size: 24px;">${otp}</strong></p>`
+      });
+      return reply.code(403).send({ error: "email_not_verified", message: "Please verify your email address.", requiresVerification: true, email: user.email });
+    }
 
     const token = fastify.jwt.sign({ sub: user.id, email: user.email });
     return reply.send({
