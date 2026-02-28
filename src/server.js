@@ -292,7 +292,8 @@ fastify.get("/api/auth/google/start", async (req, reply) => {
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&response_type=code` +
     `&scope=${scope}` +
-    `&state=${encodeURIComponent(state)}`;
+    `&state=${encodeURIComponent(state)}` +
+    `&prompt=select_account`;
 
   return reply.redirect(url);
 });
@@ -311,7 +312,8 @@ fastify.get("/auth/google/start", async (req, reply) => {
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&response_type=code` +
     `&scope=${scope}` +
-    `&state=${encodeURIComponent(state)}`;
+    `&state=${encodeURIComponent(state)}` +
+    `&prompt=select_account`;
 
   return reply.redirect(url);
 });
@@ -1048,6 +1050,103 @@ fastify.post(
       user: { id: user.id, email: user.email, emailVerified: user.emailVerified },
       token,
     });
+  }
+);
+
+fastify.post(
+  "/auth/forgot-password",
+  { config: { rateLimit: { max: 5, timeWindow: "15 minutes" } } },
+  async (req, reply) => {
+    const { email, lang: reqLang } = req.body || {};
+    if (!email) return reply.code(400).send({ error: "email required" });
+
+    const safeEmail = String(email).trim().toLowerCase();
+
+    // Include profile to check language for localized emails
+    const user = await prisma.user.findUnique({
+      where: { email: safeEmail },
+      include: { profile: true }
+    });
+
+    if (!user) return reply.send({ success: true });
+
+    const lang = reqLang || user.profile?.defaultLanguage || 'en';
+
+    // If Google SSO user, send alternate email
+    if (user.is_sso_user) {
+      const subject = getTranslation(lang, 'sso_password_reset_subject') || "Horse Portal Login Info";
+      const body = getTranslation(lang, 'sso_password_reset_body') || "You requested a password reset, but you created this account using Google. Please return to Horse Portal and click the 'Continue with Google' button to log in.";
+      const linkText = getTranslation(lang, 'sso_login_btn') || "Return to Website";
+      const linkUrl = process.env.APP_WEB_URL || "http://localhost:5173";
+
+      const sendEmail = require('./services/emailService');
+      sendEmail({
+        to: user.email,
+        subject: subject,
+        html: `<p>${body}</p><p><a href="${linkUrl}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px;">${linkText}</a></p>`
+      });
+
+      return reply.send({ success: true });
+    }
+
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        recovery_token: token,
+        recovery_sent_at: new Date()
+      }
+    });
+
+    const subject = getTranslation(lang, 'forgot_password_subject');
+    const body = getTranslation(lang, 'forgot_password_body');
+    const linkText = getTranslation(lang, 'reset_password_btn');
+    const linkUrl = `${process.env.APP_WEB_URL || "http://localhost:5173"}/${lang}/reset-password?token=${token}`;
+
+    const sendEmail = require('./services/emailService');
+    sendEmail({
+      to: user.email,
+      subject: subject,
+      html: `<p>${body}</p><p><a href="${linkUrl}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px;">${linkText}</a></p>`
+    });
+
+    return reply.send({ success: true });
+  }
+);
+
+fastify.post(
+  "/auth/reset-password",
+  { config: { rateLimit: { max: 5, timeWindow: "15 minutes" } } },
+  async (req, reply) => {
+    const { token, password } = req.body || {};
+    if (!token || !password) return reply.code(400).send({ error: "token and password required" });
+
+    const user = await prisma.user.findFirst({
+      where: { recovery_token: token }
+    });
+
+    if (!user) return reply.code(400).send({ error: "invalid or expired token" });
+
+    const expiration = 60 * 60 * 1000;
+    if (new Date() - new Date(user.recovery_sent_at) > expiration) {
+      return reply.code(400).send({ error: "invalid or expired token" });
+    }
+
+    const argon2 = require('argon2');
+    const passwordHash = await argon2.hash(password);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        recovery_token: null,
+        recovery_sent_at: null
+      } // Invalidate token after consumption
+    });
+
+    return reply.send({ success: true });
   }
 );
 
