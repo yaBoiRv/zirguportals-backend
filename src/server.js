@@ -363,11 +363,6 @@ fastify.get("/api/auth/google/callback", async (req, reply) => {
         is_sso_user: true,
       },
     });
-  } else if (!user.is_sso_user) {
-    user = await prisma.user.update({
-      where: { id: user.id },
-      data: { is_sso_user: true },
-    });
   }
 
   // Ensure profile exists
@@ -443,11 +438,6 @@ fastify.get("/auth/google/callback", async (req, reply) => {
         emailVerified: true,
         is_sso_user: true,
       },
-    });
-  } else if (!user.is_sso_user) {
-    user = await prisma.user.update({
-      where: { id: user.id },
-      data: { is_sso_user: true },
     });
   }
 
