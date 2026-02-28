@@ -293,7 +293,7 @@ fastify.get("/api/auth/google/start", async (req, reply) => {
     `&response_type=code` +
     `&scope=${scope}` +
     `&state=${encodeURIComponent(state)}` +
-    `&prompt=select_account`;
+    `&prompt=consent%20select_account`;
 
   return reply.redirect(url);
 });
@@ -313,7 +313,7 @@ fastify.get("/auth/google/start", async (req, reply) => {
     `&response_type=code` +
     `&scope=${scope}` +
     `&state=${encodeURIComponent(state)}` +
-    `&prompt=select_account`;
+    `&prompt=consent%20select_account`;
 
   return reply.redirect(url);
 });
