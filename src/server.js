@@ -293,7 +293,7 @@ fastify.get("/api/auth/google/start", async (req, reply) => {
     `&response_type=code` +
     `&scope=${scope}` +
     `&state=${encodeURIComponent(state)}` +
-    `&prompt=consent%20select_account`;
+    `&prompt=select_account`;
 
   return reply.redirect(url);
 });
@@ -313,7 +313,7 @@ fastify.get("/auth/google/start", async (req, reply) => {
     `&response_type=code` +
     `&scope=${scope}` +
     `&state=${encodeURIComponent(state)}` +
-    `&prompt=consent%20select_account`;
+    `&prompt=select_account`;
 
   return reply.redirect(url);
 });
@@ -948,6 +948,9 @@ fastify.patch("/profile/me", { preHandler: requireAuth }, async (req, reply) => 
     return reply.send({ profile });
   } catch (e) {
     req.log.error(e);
+    if (e.code === 'P2002' && e.meta?.target?.includes('username')) {
+      return reply.code(400).send({ error: "username_taken", message: "Username is already taken" });
+    }
     return reply.code(500).send({ error: "failed_to_update_profile" });
   }
 });
