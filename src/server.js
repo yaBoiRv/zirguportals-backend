@@ -593,8 +593,8 @@ fastify.post("/files/signed-upload", { preHandler: requireAuth }, async (req, re
     bucket = requestedBucket;
   }
 
-  const ext = String(filename).split(".").pop()?.toLowerCase() || "bin";
-  const key = `${crypto.randomUUID()}.${ext}`;
+  const safeName = String(filename).replace(/[^a-zA-Z0-9_.-]/g, '_');
+  const key = `${crypto.randomUUID()}/${safeName}`;
 
   const cmd = new PutObjectCommand({
     Bucket: bucket,
