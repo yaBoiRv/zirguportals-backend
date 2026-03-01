@@ -14,8 +14,7 @@ module.exports = async function dictionariesRoutes(fastify) {
   // normalize lang
   function normLang(lang) {
     const l = String(lang || 'en').toLowerCase();
-    // support your app languages (adjust if needed)
-    if (['lv', 'en', 'ru', 'lt', 'et'].includes(l)) return l;
+    if (['lv', 'en', 'ru', 'lt', 'ee'].includes(l)) return l;
     return 'en';
   }
 
