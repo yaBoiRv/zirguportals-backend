@@ -12,6 +12,7 @@ module.exports = async function listingsRoutes(fastify) {
     const { sendEmail } = require('../services/emailService');
     const { getTranslation } = require('../config/emailTranslations');
     const { broadcastNewListing } = require('../services/notificationUtils');
+    const { recordView } = require('../services/viewsService');
 
     async function requireAuth(req, reply) {
         try {
@@ -206,8 +207,22 @@ module.exports = async function listingsRoutes(fastify) {
                 }
             }
 
-            // Increment views count asynchronously
-            prisma.$queryRawUnsafe(`UPDATE public.horse_listings SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1::uuid`, id).catch(e => console.error('Error incrementing views:', e));
+            // Track view (bot-filtered, 24 h deduplicated, buffered counter)
+            (() => {
+                let viewUserId = null;
+                try {
+                    const auth = req.headers.authorization || '';
+                    if (auth.startsWith('Bearer ')) {
+                        const payload = fastify.jwt.verify(auth.slice(7));
+                        viewUserId = payload.sub || null;
+                    }
+                } catch (_) { }
+                recordView(prisma, 'horse', id, {
+                    userId: viewUserId,
+                    ip: req.ip || req.headers['x-forwarded-for'] || '',
+                    userAgent: req.headers['user-agent'] || null,
+                });
+            })();
 
             const colors = await prisma.$queryRawUnsafe(
                 `SELECT c.* FROM public.horse_colors c JOIN public.horse_listing_colors lc ON lc.color_id = c.id WHERE lc.listing_id = $1::uuid`,
@@ -467,8 +482,22 @@ module.exports = async function listingsRoutes(fastify) {
                 }
             }
 
-            // Increment views count asynchronously
-            prisma.$queryRawUnsafe(`UPDATE public.equipment_listings SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1::uuid`, id).catch(e => console.error('Error incrementing views:', e));
+            // Track view (bot-filtered, 24 h deduplicated, buffered counter)
+            (() => {
+                let viewUserId = null;
+                try {
+                    const auth = req.headers.authorization || '';
+                    if (auth.startsWith('Bearer ')) {
+                        const payload = fastify.jwt.verify(auth.slice(7));
+                        viewUserId = payload.sub || null;
+                    }
+                } catch (_) { }
+                recordView(prisma, 'equipment', id, {
+                    userId: viewUserId,
+                    ip: req.ip || req.headers['x-forwarded-for'] || '',
+                    userAgent: req.headers['user-agent'] || null,
+                });
+            })();
 
             const colors = await prisma.$queryRawUnsafe(
                 `SELECT c.* FROM public.equipment_colors c JOIN public.equipment_listing_colors lc ON lc.color_id = c.id WHERE lc.listing_id = $1::uuid`,

@@ -1,6 +1,7 @@
 'use strict';
 const { sendEmail } = require('../services/emailService');
 const { getTranslation } = require('../config/emailTranslations');
+const { recordView } = require('../services/viewsService');
 
 module.exports = async function forumRoutes(fastify) {
     const prisma = fastify.prisma;
@@ -228,6 +229,15 @@ module.exports = async function forumRoutes(fastify) {
             if (!topic) {
                 return reply.code(404).send({ error: 'Topic not found' });
             }
+
+            // Track view (bot-filtered, 24 h deduplicated, buffered counter)
+            (() => {
+                recordView(prisma, 'forum', id, {
+                    userId: userId || null,
+                    ip: req.ip || req.headers['x-forwarded-for'] || '',
+                    userAgent: req.headers['user-agent'] || null,
+                });
+            })();
 
             return {
                 ...topic,

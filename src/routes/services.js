@@ -5,6 +5,7 @@ module.exports = async function servicesRoutes(fastify) {
     const { sendEmail } = require('../services/emailService');
     const { getTranslation } = require('../config/emailTranslations');
     const { broadcastNewListing } = require('../services/notificationUtils');
+    const { recordView } = require('../services/viewsService');
 
     // Middleware to require auth
     async function requireAuth(req, reply) {
@@ -81,8 +82,22 @@ module.exports = async function servicesRoutes(fastify) {
                 }
             }
 
-            // Increment views count asynchronously
-            prisma.$queryRawUnsafe(`UPDATE public.services SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1::uuid`, id).catch(e => console.error('Error incrementing views:', e));
+            // Track view (bot-filtered, 24 h deduplicated, buffered counter)
+            (() => {
+                let viewUserId = null;
+                try {
+                    const auth = req.headers.authorization || '';
+                    if (auth.startsWith('Bearer ')) {
+                        const payload = fastify.jwt.verify(auth.slice(7));
+                        viewUserId = payload.sub || null;
+                    }
+                } catch (_) { }
+                recordView(prisma, 'service', id, {
+                    userId: viewUserId,
+                    ip: req.ip || req.headers['x-forwarded-for'] || '',
+                    userAgent: req.headers['user-agent'] || null,
+                });
+            })();
 
             return {
                 ...r,
