@@ -491,11 +491,11 @@ model Announcements {
   is_pinned    Boolean   @default(false) @map("is_pinned")
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  userId       String    @map("user_id") @db.Uuid
+  userId       String?   @map("user_id") @db.Uuid
   images       String[]  @default([])
   files        String[]  @default([])
   pinned_until DateTime? @map("pinned_until") @db.Timestamptz(6)
-  user         Profile   @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "fk_announcements_user")
+  user         Profile?  @relation(fields: [userId], references: [userId], onDelete: SetNull, onUpdate: NoAction, map: "fk_announcements_user")
 
   @@index([category], map: "idx_announcements_category")
   @@index([createdAt(sort: Desc)], map: "idx_announcements_created_at")
