@@ -102,6 +102,7 @@ fastify.register(cors, {
       "https://horseportal.net",
       "https://www.horseportal.net",
       "https://dev-api.horseportal.net",
+      "https://api.horseportal.net",
       "http://localhost:8083",
       "http://localhost:5173",
       "http://127.0.0.1:8083",
