@@ -45,16 +45,31 @@ module.exports = async function chatRoutes(fastify) {
         if (!them) return reply.code(404).send({ error: "target user not found" });
 
         // ✅ find existing conversation with same participants + optional source
+        // Use AND + two 'some' conditions so it only matches a conversation that has BOTH users
         const existing = await prisma.conversation.findFirst({
             where: {
-                participants: {
-                    every: { userId: { in: [req.user.id, targetUserId] } },
-                },
+                AND: [
+                    { participants: { some: { userId: req.user.id } } },
+                    { participants: { some: { userId: targetUserId } } },
+                ],
                 sourceType: sourceType ?? null,
                 sourceId: sourceId ?? null,
             },
         });
-        if (existing) return reply.send({ conversationId: existing.id, isNew: false });
+        if (existing) {
+            // Ensure both participants exist (tolerate old broken conversations)
+            const participantIds = (await prisma.conversationParticipant.findMany({
+                where: { conversationId: existing.id },
+                select: { userId: true }
+            })).map(p => p.userId);
+            if (!participantIds.includes(targetUserId)) {
+                await prisma.conversationParticipant.create({ data: { conversationId: existing.id, userId: targetUserId } }).catch(() => { });
+            }
+            if (!participantIds.includes(req.user.id)) {
+                await prisma.conversationParticipant.create({ data: { conversationId: existing.id, userId: req.user.id } }).catch(() => { });
+            }
+            return reply.send({ conversationId: existing.id, isNew: false });
+        }
 
         const conv = await prisma.conversation.create({
             data: {
@@ -102,8 +117,52 @@ module.exports = async function chatRoutes(fastify) {
         // flatten last message & populate source info
         const out = await Promise.all(conversations.map(async (c) => {
             // Find the OTHER participant (not me)
-            // We cannot rely on order, so we filter by ID. A participant is 'other' if userId != me.
-            const other = c.participants.map(p => p.user).find(u => u.userId !== req.user.id) || null;
+            let other = c.participants.map(p => p.user).find(u => u.userId !== req.user.id) || null;
+
+            // Fallback: if conversation only has 1 participant (legacy bug), try to
+            // resolve the other user from the last message sender or source listing owner
+            if (!other) {
+                // Try last message sender
+                const lastMsg = c.messages[0];
+                if (lastMsg?.sender && lastMsg.sender.userId !== req.user.id) {
+                    other = lastMsg.sender;
+                } else {
+                    // Try to fetch owner from the source listing
+                    try {
+                        let ownerId = null;
+                        if (c.sourceType === 'horse_listing') {
+                            const item = await prisma.horse_listings.findUnique({ where: { id: c.sourceId }, select: { user_id: true } });
+                            if (item) ownerId = item.user_id;
+                        } else if (c.sourceType === 'equipment_listing') {
+                            const item = await prisma.equipment_listings.findUnique({ where: { id: c.sourceId }, select: { user_id: true } });
+                            if (item) ownerId = item.user_id;
+                        } else if (c.sourceType === 'service') {
+                            const item = await prisma.services.findUnique({ where: { id: c.sourceId }, select: { user_id: true } });
+                            if (item) ownerId = item.user_id;
+                        } else if (c.sourceType === 'trainer') {
+                            const item = await prisma.trainers.findUnique({ where: { id: c.sourceId }, select: { user_id: true } });
+                            if (item) ownerId = item.user_id;
+                        }
+                        if (ownerId && ownerId !== req.user.id) {
+                            const ownerProfile = await prisma.profile.findUnique({
+                                where: { userId: ownerId },
+                                select: { id: true, userId: true, name: true, username: true, avatarUrl: true }
+                            });
+                            if (ownerProfile) {
+                                other = ownerProfile;
+                                // Backfill missing participant so next time is correct
+                                await prisma.conversationParticipant.upsert({
+                                    where: { conversationId_userId: { conversationId: c.id, userId: ownerId } },
+                                    create: { conversationId: c.id, userId: ownerId },
+                                    update: {}
+                                }).catch(() => { });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error resolving other participant fallback:', e);
+                    }
+                }
+            }
 
             let source_info = null;
             let is_listing_owner = false;
@@ -204,11 +263,43 @@ module.exports = async function chatRoutes(fastify) {
             const limit = Math.min(Number(req.query.limit || 50), 200);
             const cursor = req.query.cursor;
 
-            // must be participant
-            const participant = await prisma.conversationParticipant.findUnique({
+            // Must be participant — check first, then optionally auto-join if listing owner
+            let participant = await prisma.conversationParticipant.findUnique({
                 where: { conversationId_userId: { conversationId, userId: req.user.id } },
             });
-            if (!participant) return reply.code(403).send({ error: "not a participant" });
+            if (!participant) {
+                // Check if user is the source listing owner — if so, auto-add them
+                try {
+                    const conv = await prisma.conversation.findUnique({ where: { id: conversationId }, select: { sourceType: true, sourceId: true } });
+                    if (conv?.sourceType && conv?.sourceId) {
+                        let ownerId = null;
+                        if (conv.sourceType === 'horse_listing') {
+                            const item = await prisma.horse_listings.findUnique({ where: { id: conv.sourceId }, select: { user_id: true } });
+                            if (item) ownerId = item.user_id;
+                        } else if (conv.sourceType === 'equipment_listing') {
+                            const item = await prisma.equipment_listings.findUnique({ where: { id: conv.sourceId }, select: { user_id: true } });
+                            if (item) ownerId = item.user_id;
+                        } else if (conv.sourceType === 'service') {
+                            const item = await prisma.services.findUnique({ where: { id: conv.sourceId }, select: { user_id: true } });
+                            if (item) ownerId = item.user_id;
+                        } else if (conv.sourceType === 'trainer') {
+                            const item = await prisma.trainers.findUnique({ where: { id: conv.sourceId }, select: { user_id: true } });
+                            if (item) ownerId = item.user_id;
+                        }
+                        if (ownerId === req.user.id) {
+                            // Backfill: add listing owner as participant
+                            participant = await prisma.conversationParticipant.upsert({
+                                where: { conversationId_userId: { conversationId, userId: req.user.id } },
+                                create: { conversationId, userId: req.user.id },
+                                update: {}
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error auto-joining participant:', e);
+                }
+                if (!participant) return reply.code(403).send({ error: "not a participant" });
+            }
 
             const messages = await prisma.message.findMany({
                 where: { conversationId: req.params.id }, // Use params.id directly or ensure variable usage matches
