@@ -196,6 +196,7 @@ module.exports = async function chatRoutes(fastify) {
                             source_info = {
                                 title: item.full_name,
                                 price: Number(item.hourly_rate || 0),
+                                currency: 'EUR', // services model does not have currency, default to EUR
                                 pricing_type: item.pricing_type,
                                 avatar_url: item.profile_photo_url,
                                 specialty_key: item.specialty
@@ -208,7 +209,15 @@ module.exports = async function chatRoutes(fastify) {
                             include: { profiles: { select: { name: true, avatarUrl: true } } }
                         });
                         if (item) {
-                            if (item.profiles) source_info = { name: item.profiles.name, avatar_url: item.profiles.avatarUrl };
+                            if (item.profiles) {
+                                source_info = { 
+                                    name: item.profiles.name, 
+                                    avatar_url: item.profiles.avatarUrl,
+                                    price: Number(item.hourly_rate || 0),
+                                    currency: item.currency || 'EUR',
+                                    pricing_type: item.pricing_type
+                                };
+                            }
                             if (item.user_id === req.user.id) is_listing_owner = true;
                         }
                     }
