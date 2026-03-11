@@ -1455,7 +1455,7 @@ const start = async () => {
               await sendEmail({
                 to: actualUser.email,
                 subject: subject,
-                html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/messages?chatId=${conversationId}">${linkText}</a></p>`
+                html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/messages?chatId=${conversationId}&messageId=${msg.id}">${linkText}</a></p>`
               });
             } else {
               console.log(`[ChatDebug] Skipped email to ${actualUser?.email}: prefs check failed`);
