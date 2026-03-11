@@ -1435,7 +1435,8 @@ const start = async () => {
                     content: 'You have a new message',
                     source_type: 'chat',
                     source_id: conversationId,
-                    source_user_id: socket.user.id
+                    source_user_id: socket.user.id,
+                    metadata: { messageId: msg.id }
                   }
                 });
               }
