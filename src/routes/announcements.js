@@ -1,5 +1,7 @@
 'use strict';
 
+const ioInstance = require('../services/ioInstance');
+
 module.exports = async function announcementsRoutes(fastify) {
     const prisma = fastify.prisma;
     const { sendEmail } = require('../services/emailService');
@@ -150,7 +152,7 @@ module.exports = async function announcementsRoutes(fastify) {
                     });
 
                     // Push real-time update to every connected user
-                    const io = fastify.io;
+                    const io = ioInstance.getIo();
                     if (io) {
                         for (const notif of notifications) {
                             io.to(`user:${notif.user_id}`).emit('notification:new', {
@@ -161,6 +163,8 @@ module.exports = async function announcementsRoutes(fastify) {
                             });
                         }
                         console.log(`[AnnouncementDebug] Emitted real-time notification to ${notifications.length} users`);
+                    } else {
+                        console.log(`[AnnouncementDebug] io not available yet – users will see it on next poll`);
                     }
                 }
 

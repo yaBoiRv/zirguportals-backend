@@ -27,6 +27,7 @@ const dictionariesRoutes = require("./routes/dictionaries");
 const listingsRoutes = require("./routes/listings");
 const trainersRoutes = require("./routes/trainers");
 const servicesRoutes = require("./routes/services");
+const ioInstance = require("./services/ioInstance");
 
 const prisma = new PrismaClient({
   log: [
@@ -1349,6 +1350,8 @@ const start = async () => {
 
     // Decorate fastify with io so routes can emit real-time events
     fastify.decorate('io', io);
+    // Also register with singleton so route files can access it
+    ioInstance.setIo(io);
 
     io.on("connection", (socket) => {
       fastify.log.info({ socketId: socket.id, user: socket.user }, "ws connected");
