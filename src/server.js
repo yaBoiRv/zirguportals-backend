@@ -1313,6 +1313,7 @@ const start = async () => {
 
     // create socket.io BEFORE listen so it attaches to the same server
     const io = new Server(fastify.server, {
+
       path: "/ws",
       cors: {
         origin: [
@@ -1346,8 +1347,16 @@ const start = async () => {
       }
     });
 
+    // Decorate fastify with io so routes can emit real-time events
+    fastify.decorate('io', io);
+
     io.on("connection", (socket) => {
       fastify.log.info({ socketId: socket.id, user: socket.user }, "ws connected");
+
+      // Join a personal room so we can push to this user from any route
+      if (socket.user?.id) {
+        socket.join(`user:${socket.user.id}`);
+      }
 
       socket.on("ping", () => socket.emit("pong"));
 

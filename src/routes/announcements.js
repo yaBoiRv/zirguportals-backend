@@ -148,6 +148,20 @@ module.exports = async function announcementsRoutes(fastify) {
                     await prisma.notifications.createMany({
                         data: notifications
                     });
+
+                    // Push real-time update to every connected user
+                    const io = fastify.io;
+                    if (io) {
+                        for (const notif of notifications) {
+                            io.to(`user:${notif.user_id}`).emit('notification:new', {
+                                type: 'new_announcement',
+                                title: 'New Announcement',
+                                content: title,
+                                source_id: announcement.id
+                            });
+                        }
+                        console.log(`[AnnouncementDebug] Emitted real-time notification to ${notifications.length} users`);
+                    }
                 }
 
                 // Send Emails
