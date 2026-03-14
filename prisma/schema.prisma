@@ -1238,6 +1238,7 @@ model horse_listings {
   city                       String?
   custom_breed               String?
   custom_pony_breed          String?
+  custom_discipline          String?
   horse_listing_colors       horse_listing_colors[]
   horse_listing_disciplines  horse_listing_disciplines[]
   horse_listing_temperaments horse_listing_temperaments[]
