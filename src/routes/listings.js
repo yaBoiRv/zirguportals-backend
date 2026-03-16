@@ -529,7 +529,7 @@ module.exports = async function listingsRoutes(fastify) {
         try {
             const {
                 user_id, equipmentType_ids, brand_ids, material_ids, condition_ids,
-                min_price, max_price, search, sort, limit = 50, offset = 0, include_hidden, lang = 'en'
+                min_price, max_price, min_size, max_size, search, sort, limit = 50, offset = 0, include_hidden, lang = 'en'
             } = req.query;
 
             let sql = `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar,
@@ -570,21 +570,7 @@ module.exports = async function listingsRoutes(fastify) {
             addArrayFilter(equipmentType_ids, 'equipment_type_id');
             addArrayFilter(brand_ids, 'brand_id');
             addArrayFilter(material_ids, 'material_id');
-            // condition is string enum in DB ('new', 'used', etc) or text? 
-            // Previous code used addArrayFilter but cast to Number. 
-            // Let's check Schema if possible. But assume frontend sends what backend needs. 
-            // If condition_ids implies IDs, but DB has string 'condition', we might have a mismatch or need translation. 
-            // The previous code had:  addArrayFilter(condition_ids, 'condition'); which casts to Number. 
-            // If condition in DB is string, this fails. 
-            // Let's assume condition_ids are NOT numbers if condition is string.
-            // But 'condition_ids' suggests IDs. 
-            // Let's keep it safe: if it's strictly specific values, we use string array filter logic.
-            // For now, I'll use a string version of array filter for condition if needed, or just revert to previous logic
-            // providing the previous logic WAS working or intended. 
-            // The previous logic I restored uses `addArrayFilter` which casts to Number. 
-            // If condition IS text, this is a bug in previous logic too. 
-            // I'll stick to the "AddArrayFilter" logic for now but might need adjustment if condition is text.
-            // Actually, for condition, let's treat it as string array.
+
             if (condition_ids) {
                 const arr = Array.isArray(condition_ids) ? condition_ids : (typeof condition_ids === 'string' ? condition_ids.split(',') : [condition_ids]);
                 if (arr.length > 0) {
@@ -600,6 +586,15 @@ module.exports = async function listingsRoutes(fastify) {
             if (max_price) {
                 sql += ` AND l.price <= $${pIdx++}`;
                 params.push(Number(max_price));
+            }
+
+            if (min_size) {
+                sql += ` AND NULLIF(regexp_replace(REPLACE(l.size, ',', '.'), '[^0-9.]', '', 'g'), '')::numeric >= $${pIdx++}`;
+                params.push(Number(min_size));
+            }
+            if (max_size) {
+                sql += ` AND NULLIF(regexp_replace(REPLACE(l.size, ',', '.'), '[^0-9.]', '', 'g'), '')::numeric <= $${pIdx++}`;
+                params.push(Number(max_size));
             }
             if (search) {
                 sql += ` AND (l.title ILIKE $${pIdx} OR l.description ILIKE $${pIdx})`;
