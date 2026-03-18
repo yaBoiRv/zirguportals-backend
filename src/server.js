@@ -562,6 +562,10 @@ const forumRoutes = require("./routes/forums");
 fastify.register(forumRoutes, { prefix: "/forums" });
 fastify.register(forumRoutes, { prefix: "/api/forums" });
 
+const blogRoutes = require("./routes/blog");
+fastify.register(blogRoutes, { prefix: "/blog" });
+fastify.register(blogRoutes, { prefix: "/api/blog" });
+
 // DEBUG ROUTE - Verify deployment
 fastify.get("/api/forums-ping", async () => ({ status: "pong", version: "v3-double-register" }));
 
