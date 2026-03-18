@@ -58,14 +58,13 @@ module.exports = async function blogRoutes(fastify) {
     }
 
     // Helper: convert HTML to Markdown-compatible (for body, we just wrap in raw HTML)
-    function buildMarkdownFile({ title, description, date, image, tags, language, content, slug, published }) {
-        const tagsStr = (tags || []).map(t => `"${escapeFm(t)}"`).join(', ');
+    function buildMarkdownFile({ title, description, date, image, category, language, content, slug, published }) {
         return `---
 title: "${escapeFm(title)}"
 date: ${date || new Date().toISOString().split('T')[0]}
 description: "${escapeFm(description || '')}"
 image: ${image ? `"${escapeFm(image)}"` : ''}
-tags: [${tagsStr}]
+category: ${category ? `"${escapeFm(category)}"` : '""'}
 language: ${language}
 published: ${published !== false ? 'true' : 'false'}
 ---
@@ -120,7 +119,7 @@ ${content || ''}
                             description: fm.description || '',
                             date: fm.date || '',
                             image: fm.image || '',
-                            tags: fm.tags || [],
+                            category: fm.category || (fm.tags && fm.tags[0]) || 'News',
                             published: fm.published !== false,
                             preview: (fm.content || '').substring(0, 200),
                         });
@@ -158,7 +157,7 @@ ${content || ''}
 
     // POST /api/blog - create new post
     fastify.post('/', { preHandler: requireAdmin }, async (req, reply) => {
-        const { title, description, content, language, image, tags, date, published, customSlug } = req.body || {};
+        const { title, description, content, language, image, category, date, published, customSlug } = req.body || {};
         if (!title || !language) return reply.code(400).send({ error: 'title and language required' });
         if (!SUPPORTED_LANGS.includes(language)) return reply.code(400).send({ error: 'Invalid language' });
 
@@ -169,7 +168,7 @@ ${content || ''}
         const filePath = path.join(langDir, `${slug}.md`);
         if (fs.existsSync(filePath)) return reply.code(409).send({ error: 'A post with this slug already exists' });
 
-        const fileContent = buildMarkdownFile({ title, description, date: date || new Date().toISOString().split('T')[0], image, tags, language, content, slug, published });
+        const fileContent = buildMarkdownFile({ title, description, date: date || new Date().toISOString().split('T')[0], image, category: category || 'News', language, content, slug, published });
         fs.writeFileSync(filePath, fileContent, 'utf-8');
 
         return reply.code(201).send({ slug, language, id: `${language}/${slug}` });
@@ -182,7 +181,7 @@ ${content || ''}
         const filePath = path.join(BLOG_DIR, lang, `${slug}.md`);
         if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Post not found' });
 
-        const { title, description, content, image, tags, date, published } = req.body || {};
+        const { title, description, content, image, category, date, published } = req.body || {};
 
         // Read existing to merge
         const raw = fs.readFileSync(filePath, 'utf-8');
@@ -193,7 +192,7 @@ ${content || ''}
             description: description ?? existing.description,
             date: date ?? existing.date,
             image: image ?? existing.image,
-            tags: tags ?? existing.tags,
+            category: category ?? existing.category ?? (existing.tags && existing.tags[0]) ?? 'News',
             language: lang,
             content: content !== undefined ? content : existing.content,
             slug,
