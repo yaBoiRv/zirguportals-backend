@@ -3,6 +3,7 @@
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { marked } = require('marked');
 
 /**
  * Blog management routes
@@ -132,6 +133,71 @@ ${content || ''}
         } catch (e) {
             fastify.log.error(e);
             return reply.code(500).send({ error: 'Failed to list posts', details: e.message });
+        }
+    });
+
+    // GET /api/blog/public - list all published posts for public frontend
+    fastify.get('/public', async (req, reply) => {
+        try {
+            const posts = [];
+            for (const lang of SUPPORTED_LANGS) {
+                const langDir = path.join(BLOG_DIR, lang);
+                if (!fs.existsSync(langDir)) continue;
+                const files = fs.readdirSync(langDir).filter(f => f.endsWith('.md'));
+                for (const file of files) {
+                    const raw = fs.readFileSync(path.join(langDir, file), 'utf-8');
+                    const fm = parseFrontmatter(raw);
+                    if (fm && fm.published !== false) {
+                        posts.push({
+                            id: `${lang}/${file.replace('.md', '')}`,
+                            slugAsParams: file.replace('.md', ''),
+                            slug: file.replace('.md', ''),
+                            language: lang,
+                            title: fm.title || '',
+                            description: fm.description || '',
+                            date: fm.date || '',
+                            image: fm.image || '',
+                            category: fm.category || (fm.tags && fm.tags[0]) || 'News',
+                            published: true,
+                            preview: (fm.content || '').substring(0, 200),
+                            tags: fm.tags || [],
+                        });
+                    }
+                }
+            }
+            posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+            return { data: posts };
+        } catch (e) {
+            fastify.log.error(e);
+            return reply.code(500).send({ error: 'Failed to list public posts', details: e.message });
+        }
+    });
+
+    // GET /api/blog/public/:lang/:slug - get single public post
+    fastify.get('/public/:lang/:slug', async (req, reply) => {
+        const { lang, slug } = req.params;
+        if (!SUPPORTED_LANGS.includes(lang)) return reply.code(400).send({ error: 'Invalid language' });
+        const filePath = path.join(BLOG_DIR, lang, `${slug}.md`);
+        if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Post not found' });
+        try {
+            const raw = fs.readFileSync(filePath, 'utf-8');
+            const fm = parseFrontmatter(raw);
+            if (fm.published === false) return reply.code(404).send({ error: 'Post not found' });
+            return {
+                slugAsParams: slug,
+                slug,
+                language: lang,
+                title: fm.title || '',
+                description: fm.description || '',
+                date: fm.date || '',
+                image: fm.image || '',
+                category: fm.category || (fm.tags && fm.tags[0]) || 'News',
+                content: fm.content ? marked(fm.content) : '',
+                published: true,
+                tags: fm.tags || [],
+            };
+        } catch (e) {
+            return reply.code(500).send({ error: 'Failed to read post' });
         }
     });
 
