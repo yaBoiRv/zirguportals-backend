@@ -451,14 +451,18 @@ module.exports = async function listingsRoutes(fastify) {
     // GET /listings/equipment/:id
     fastify.get('/equipment/:id', async (req, reply) => {
         const { id } = req.params;
+        const lang = req.query.lang || 'en';
         try {
             const rows = await prisma.$queryRawUnsafe(
-                `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar, p.phone as seller_phone, p.created_at as seller_member_since, b.name as brand
+                `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar, p.phone as seller_phone, p.created_at as seller_member_since, b.name as brand,
+                 COALESCE(eit.name, ei.key) as equipment_type
                  FROM public.equipment_listings l
                  LEFT JOIN public.profiles p ON p.user_id = l.user_id
                  LEFT JOIN public.equipment_brands b ON b.id = l.brand_id
+                 LEFT JOIN public.equipment_items ei ON ei.id = l.equipment_item_id
+                 LEFT JOIN public.equipment_item_translations eit ON eit.item_id = ei.id AND eit.lang_code = $2
                  WHERE l.id = $1::uuid`,
-                id
+                id, lang
             );
             if (!rows.length) return reply.code(404).send({ error: 'Listing not found' });
 
@@ -533,13 +537,13 @@ module.exports = async function listingsRoutes(fastify) {
             } = req.query;
 
             let sql = `SELECT l.*, p.name as seller_name, p.username as seller_username, p.avatar_url as seller_avatar,
-                              COALESCE(ett.name, et.key, l.custom_equipment_type) as equipment_type,
+                              COALESCE(eit.name, ei.key) as equipment_type,
                               b.name as brand,
                               ARRAY(SELECT color_id FROM public.equipment_listing_colors WHERE listing_id = l.id) as color_ids
                        FROM public.equipment_listings l
                        LEFT JOIN public.profiles p ON p.user_id = l.user_id
-                       LEFT JOIN public.equipment_types et ON et.id = l.equipment_type_id
-                       LEFT JOIN public.equipment_type_translations ett ON ett.type_id = et.id AND ett.lang_code = $1
+                       LEFT JOIN public.equipment_items ei ON ei.id = l.equipment_item_id
+                       LEFT JOIN public.equipment_item_translations eit ON eit.item_id = ei.id AND eit.lang_code = $1
                        LEFT JOIN public.equipment_brands b ON b.id = l.brand_id
                        WHERE 1=1`;
             const params = [lang];
@@ -567,7 +571,7 @@ module.exports = async function listingsRoutes(fastify) {
                 }
             };
 
-            addArrayFilter(equipmentType_ids, 'equipment_type_id');
+            addArrayFilter(equipmentType_ids, 'equipment_item_id');
             addArrayFilter(brand_ids, 'brand_id');
             addArrayFilter(material_ids, 'material_id');
 
@@ -662,14 +666,14 @@ module.exports = async function listingsRoutes(fastify) {
                 `INSERT INTO public.equipment_listings (
                     user_id, title, description, price, currency, condition, size, 
                     country, images, status, featured, visible, city, lat, lon, 
-                    municipality, brand_id, material_id, equipment_type_id, custom_equipment_type
+                    municipality, brand_id, material_id, equipment_item_id
                 ) VALUES (
-                    $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, 'available', $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+                    $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, 'available', $10, $11, $12, $13, $14, $15, $16, $17, $18
                 ) RETURNING id`,
                 userId, b.title, b.description, b.price || null, b.currency || 'EUR', b.condition, b.size || null,
                 b.country, b.images || [], b.featured || false, b.visible !== false, b.city || null,
                 Number(b.lat || 0), Number(b.lon || 0), b.municipality || null, b.brand_id || null,
-                b.material_id || null, b.equipment_type_id || null, b.custom_equipment_type || null
+                b.material_id || null, b.equipment_item_id || null
             );
             const listingId = result[0].id;
             if (b.color_ids?.length) {
@@ -723,8 +727,7 @@ module.exports = async function listingsRoutes(fastify) {
                 municipality: 'municipality',
                 brand_id: 'brand_id',
                 material_id: 'material_id',
-                equipment_type_id: 'equipment_type_id',
-                custom_equipment_type: 'custom_equipment_type',
+                equipment_item_id: 'equipment_item_id',
                 status: 'status',
                 sold_at: 'sold_at'
             };

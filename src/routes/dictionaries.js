@@ -51,6 +51,38 @@ module.exports = async function dictionariesRoutes(fastify) {
     }
   }
 
+  async function getEquipmentTaxonomy(lang) {
+    try {
+      const groups = await prisma.$queryRawUnsafe(`
+        SELECT g.id, g.key, COALESCE(t.name, g.key) as name FROM public.equipment_groups g
+        LEFT JOIN public.equipment_group_translations t ON t.group_id = g.id AND t.lang_code = $1
+        ORDER BY COALESCE(t.name, g.key) ASC
+      `, lang);
+      
+      const categories = await prisma.$queryRawUnsafe(`
+        SELECT c.id, c.group_id, c.key, COALESCE(t.name, c.key) as name FROM public.equipment_categories c
+        LEFT JOIN public.equipment_category_translations t ON t.category_id = c.id AND t.lang_code = $1
+        ORDER BY COALESCE(t.name, c.key) ASC
+      `, lang);
+      
+      const subcategories = await prisma.$queryRawUnsafe(`
+        SELECT s.id, s.category_id, s.key, COALESCE(t.name, s.key) as name FROM public.equipment_subcategories s
+        LEFT JOIN public.equipment_subcategory_translations t ON t.subcategory_id = s.id AND t.lang_code = $1
+        ORDER BY COALESCE(t.name, s.key) ASC
+      `, lang);
+      
+      const items = await prisma.$queryRawUnsafe(`
+        SELECT i.id, i.category_id, i.subcategory_id, i.key, COALESCE(t.name, i.key) as name FROM public.equipment_items i
+        LEFT JOIN public.equipment_item_translations t ON t.item_id = i.id AND t.lang_code = $1
+        ORDER BY COALESCE(t.name, i.key) ASC
+      `, lang);
+
+      return { groups, categories, subcategories, items };
+    } catch (err) {
+      console.error('Error fetching equipment taxonomy:', err);
+      return { groups: [], categories: [], subcategories: [], items: [] };
+    }
+  }
 
   // --- Fallback Data REMOVED - Database only ---
 
@@ -62,6 +94,9 @@ module.exports = async function dictionariesRoutes(fastify) {
     reply.header('Cache-Control', 'public, max-age=300');
 
     switch (key) {
+      case 'equipment-taxonomy':
+        return getEquipmentTaxonomy(lang);
+
       case 'horse-colors':
         // Include the `hex` column (aliased as `icon`) so the frontend can render color swatches.
         return dictWithTranslations({
