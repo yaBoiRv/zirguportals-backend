@@ -220,7 +220,7 @@ module.exports = async function dictionariesRoutes(fastify) {
         }
 
       case 'equipment-brands':
-        return prisma.$queryRawUnsafe('SELECT id, key, name FROM public.equipment_brands ORDER BY name ASC');
+        return prisma.$queryRawUnsafe('SELECT id, name FROM public.equipment_brands ORDER BY name ASC');
 
       case 'equipment-types':
         return dictWithTranslations({
