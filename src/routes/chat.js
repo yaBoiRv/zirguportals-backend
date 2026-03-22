@@ -211,8 +211,8 @@ module.exports = async function chatRoutes(fastify) {
                         if (item) {
                             if (item.profiles) {
                                 source_info = { 
-                                    name: item.profiles.name, 
-                                    avatar_url: item.profiles.avatarUrl,
+                                    name: item.name, 
+                                    avatar_url: item.photo_url || item.profiles.avatarUrl,
                                     price: Number(item.hourly_rate || 0),
                                     currency: item.currency || 'EUR',
                                     pricing_type: item.pricing_type
