@@ -37,7 +37,7 @@ module.exports = async function blogRoutes(fastify) {
         });
         const roles = user?.user_roles?.map(r => r.role) || [];
         if (!roles.some(r => ['admin', 'super_admin', 'super_master'].includes(r))) {
-            return reply.code(403).send({ error: 'Forbidden' });
+            return reply.code(403).send({ error: 'Forbidde' });
         }
     }
 
