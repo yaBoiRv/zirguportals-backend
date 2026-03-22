@@ -247,7 +247,18 @@ ${content || ''}
         const filePath = path.join(BLOG_DIR, lang, `${slug}.md`);
         if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Post not found' });
 
-        const { title, description, content, image, category, date, published } = req.body || {};
+        const { title, description, content, image, category, date, published, customSlug } = req.body || {};
+
+        let targetSlug = slug;
+        let targetFilePath = filePath;
+
+        if (customSlug && customSlug !== slug) {
+            targetSlug = slugify(customSlug);
+            targetFilePath = path.join(BLOG_DIR, lang, `${targetSlug}.md`);
+            if (fs.existsSync(targetFilePath)) {
+                return reply.code(409).send({ error: 'A post with this slug already exists' });
+            }
+        }
 
         // Read existing to merge
         const raw = fs.readFileSync(filePath, 'utf-8');
@@ -261,12 +272,17 @@ ${content || ''}
             category: category ?? existing.category ?? (existing.tags && existing.tags[0]) ?? 'News',
             language: lang,
             content: content !== undefined ? content : existing.content,
-            slug,
+            slug: targetSlug,
             published: published !== undefined ? published : existing.published,
         });
-        fs.writeFileSync(filePath, fileContent, 'utf-8');
+        
+        fs.writeFileSync(targetFilePath, fileContent, 'utf-8');
 
-        return { slug, language: lang };
+        if (targetFilePath !== filePath) {
+            fs.unlinkSync(filePath);
+        }
+
+        return { slug: targetSlug, language: lang };
     });
 
     // DELETE /api/blog/:lang/:slug - delete post
