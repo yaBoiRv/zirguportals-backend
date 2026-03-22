@@ -11,10 +11,8 @@ const { marked } = require('marked');
  */
 module.exports = async function blogRoutes(fastify) {
 
-    // Resolve the content/blog directory relative to the frontend project
-    // Backend is at: c:/zirguportals-backend
-    // Frontend is at: c:/Users/zakis/zirgi-connect-da33eeb5
-    const BLOG_DIR = path.resolve(__dirname, '../../../Users/zakis/zirgi-connect-da33eeb5/content/blog');
+    // Always save blogs to the backend's internal content/blog folder
+    const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
 
     const SUPPORTED_LANGS = ['lv', 'lt', 'ee', 'en', 'ru'];
 
