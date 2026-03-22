@@ -59,9 +59,10 @@ module.exports = async function blogRoutes(fastify) {
     }
 
     // Helper: convert HTML to Markdown-compatible (for body, we just wrap in raw HTML)
-    function buildMarkdownFile({ title, description, date, image, category, language, content, slug, published }) {
+    function buildMarkdownFile({ title, metaTitle, description, date, image, category, language, content, slug, published }) {
         return `---
 title: "${escapeFm(title)}"
+metaTitle: "${escapeFm(metaTitle || title)}"
 date: ${date || new Date().toISOString().split('T')[0]}
 description: "${escapeFm(description || '')}"
 image: ${image ? `"${escapeFm(image)}"` : ''}
@@ -117,6 +118,7 @@ ${content || ''}
                             slug: file.replace('.md', ''),
                             language: lang,
                             title: fm.title || '',
+                            metaTitle: fm.metaTitle || '',
                             description: fm.description || '',
                             date: fm.date || '',
                             image: fm.image || '',
@@ -154,6 +156,7 @@ ${content || ''}
                             slug: file.replace('.md', ''),
                             language: lang,
                             title: fm.title || '',
+                            metaTitle: fm.metaTitle || '',
                             description: fm.description || '',
                             date: fm.date || '',
                             image: fm.image || '',
@@ -188,6 +191,7 @@ ${content || ''}
                 slug,
                 language: lang,
                 title: fm.title || '',
+                metaTitle: fm.metaTitle || '',
                 description: fm.description || '',
                 date: fm.date || '',
                 image: fm.image || '',
@@ -223,7 +227,7 @@ ${content || ''}
 
     // POST /api/blog - create new post
     fastify.post('/', { preHandler: requireAdmin }, async (req, reply) => {
-        const { title, description, content, language, image, category, date, published, customSlug } = req.body || {};
+        const { title, metaTitle, description, content, language, image, category, date, published, customSlug } = req.body || {};
         if (!title || !language) return reply.code(400).send({ error: 'title and language required' });
         if (!SUPPORTED_LANGS.includes(language)) return reply.code(400).send({ error: 'Invalid language' });
 
@@ -234,7 +238,7 @@ ${content || ''}
         const filePath = path.join(langDir, `${slug}.md`);
         if (fs.existsSync(filePath)) return reply.code(409).send({ error: 'A post with this slug already exists' });
 
-        const fileContent = buildMarkdownFile({ title, description, date: date || new Date().toISOString().split('T')[0], image, category: category || 'News', language, content, slug, published });
+        const fileContent = buildMarkdownFile({ title, metaTitle, description, date: date || new Date().toISOString().split('T')[0], image, category: category || 'News', language, content, slug, published });
         fs.writeFileSync(filePath, fileContent, 'utf-8');
 
         return reply.code(201).send({ slug, language, id: `${language}/${slug}` });
@@ -247,7 +251,7 @@ ${content || ''}
         const filePath = path.join(BLOG_DIR, lang, `${slug}.md`);
         if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Post not found' });
 
-        const { title, description, content, image, category, date, published, customSlug } = req.body || {};
+        const { title, metaTitle, description, content, image, category, date, published, customSlug } = req.body || {};
 
         let targetSlug = slug;
         let targetFilePath = filePath;
@@ -266,6 +270,7 @@ ${content || ''}
 
         const fileContent = buildMarkdownFile({
             title: title ?? existing.title,
+            metaTitle: metaTitle ?? existing.metaTitle,
             description: description ?? existing.description,
             date: date ?? existing.date,
             image: image ?? existing.image,
