@@ -43,7 +43,7 @@ const translations = {
         sso_login_btn: "Return to Website",
 
         otp_subject: "Your Verification Code",
-        otp_body: "Your email verification code is:",
+        otp_body: "Your email verification code is: (Valid for 15 minutes)",
     },
     lv: {
         forum_reply_subject: "Jauna atbilde jūsu tēmā",
@@ -89,7 +89,7 @@ const translations = {
         sso_login_btn: "Atgriezties mājaslapā",
 
         otp_subject: "Jūsu verifikācijas kods",
-        otp_body: "Jūsu e-pasta verifikācijas kods ir:",
+        otp_body: "Jūsu e-pasta verifikācijas kods ir: (Derīgs 15 minūtes)",
     },
     ru: {
         forum_reply_subject: "Новый ответ в вашей теме",
@@ -135,7 +135,7 @@ const translations = {
         sso_login_btn: "Вернуться на сайт",
 
         otp_subject: "Ваш код подтверждения",
-        otp_body: "Ваш код подтверждения электронной почты:",
+        otp_body: "Ваш код подтверждения электронной почты: (Действителен 15 минут)",
     },
     ee: {
         forum_reply_subject: "Uus vastus teie teemale",
@@ -181,7 +181,7 @@ const translations = {
         sso_login_btn: "Tagasi veebilehele",
 
         otp_subject: "Teie kinnituskood",
-        otp_body: "Teie e-posti kinnituskood on:",
+        otp_body: "Teie e-posti kinnituskood on: (Kehtib 15 minutit)",
     },
     lt: {
         forum_reply_subject: "Naujas atsakymas jūsų temoje",
@@ -227,7 +227,7 @@ const translations = {
         sso_login_btn: "Grįžti į svetainę",
 
         otp_subject: "Jūsų patvirtinimo kodas",
-        otp_body: "Jūsų el. pašto patvirtinimo kodas yra:",
+        otp_body: "Jūsų el. pašto patvirtinimo kodas yra: (Galioja 15 minučių)",
     }
 };
 
