@@ -2,7 +2,7 @@
 // Centralized branded HTML email template for HorsePortal.net
 
 const SITE_URL = process.env.APP_WEB_URL || 'https://horseportal.net';
-const LOGO_URL = `${process.env.APP_WEB_URL || 'https://horseportal.net'}/images/logos/horseportal-logo-website-formated.png`;
+const LOGO_URL = `/images/logos/horseportal-logo-website-formated.png`;
 
 // Brand colors (equestrian brown/amber theme from index.css)
 const COLORS = {
