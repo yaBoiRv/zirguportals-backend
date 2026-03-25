@@ -6,6 +6,7 @@ module.exports = async function announcementsRoutes(fastify) {
     const prisma = fastify.prisma;
     const { sendEmail } = require('../services/emailService');
     const { getTranslation } = require('../config/emailTranslations');
+    const { buildNotificationEmail } = require('../services/emailTemplate');
 
     async function requireAuth(req, reply) {
         try {
@@ -183,10 +184,15 @@ module.exports = async function announcementsRoutes(fastify) {
                                 const subject = typeof subjectFn === 'function' ? subjectFn(title) : subjectFn;
                                 const readMore = getTranslation(lang, 'read_more');
 
+                                const announcementUrl = `${process.env.APP_WEB_URL}/${lang}/announcements?announcementId=${announcement.id}`;
+                                const bodyHtml = `
+                                    <p style="font-size:17px;font-weight:bold;margin:0 0 10px;">📢 ${title}</p>
+                                    <p style="margin:0;">${content.substring(0, 200)}${content.length > 200 ? '...' : ''}</p>
+                                `;
                                 await sendEmail({
                                     to: u.email,
                                     subject: subject,
-                                    html: `<h1>${title}</h1><p>${content.substring(0, 200)}...</p><p><a href="${process.env.APP_WEB_URL}/${lang}/announcements?announcementId=${announcement.id}">${readMore}</a></p>`
+                                    html: buildNotificationEmail(bodyHtml, readMore, announcementUrl, subject)
                                 });
                                 console.log(`[AnnouncementEmail] Sent successfully to ${u.email}`);
                                 // Prevent Resend rate limits (max 2 per sec)

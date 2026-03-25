@@ -1,6 +1,7 @@
 'use strict';
 const { sendEmail } = require('../services/emailService');
 const { getTranslation } = require('../config/emailTranslations');
+const { buildNotificationEmail } = require('../services/emailTemplate');
 const { recordView } = require('../services/viewsService');
 
 module.exports = async function forumRoutes(fastify) {
@@ -402,13 +403,11 @@ module.exports = async function forumRoutes(fastify) {
                             const bodyFn = getTranslation(lang, 'forum_reply_body');
                             const bodyContent = typeof bodyFn === 'function' ? bodyFn(replierName, topic.title) : bodyFn;
 
-                            const html = `
-                                <h2>${subject}</h2>
-                                <p>${bodyContent}</p>
-                                <p><a href="${link}">${linkText}</a></p>
-                                <hr/>
-                                <small>You can change your notification preferences in your profile settings.</small>
+                            const bodyHtml = `
+                                <p style="font-size:17px;font-weight:bold;margin:0 0 12px;">💬 ${subject}</p>
+                                <p style="margin:0 0 16px;">${bodyContent}</p>
                             `;
+                            const html = buildNotificationEmail(bodyHtml, linkText, link, subject);
 
                             sendEmail({ to: recipient.email, subject: subject, html }).catch(console.error);
                         }

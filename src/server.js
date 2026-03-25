@@ -735,6 +735,7 @@ fastify.post(
     });
 
     const { sendEmail } = require('./services/emailService');
+    const { buildOtpEmail } = require('./services/emailTemplate');
     const lang = req.body?.lang || 'en';
     const { getTranslation } = require('./config/emailTranslations');
     const subject = getTranslation(lang, 'otp_subject');
@@ -743,7 +744,7 @@ fastify.post(
     sendEmail({
       to: user.email,
       subject: subject,
-      html: `<p>${bodyText} <strong style="font-size: 24px;">${otp}</strong></p>`
+      html: buildOtpEmail(bodyText, otp)
     });
 
     return reply.send({ requiresVerification: true, email: user.email });
@@ -814,6 +815,7 @@ fastify.post(
         }
       });
       const { sendEmail } = require('./services/emailService');
+      const { buildOtpEmail } = require('./services/emailTemplate');
       const lang = req.body?.lang || 'en';
       const { getTranslation } = require('./config/emailTranslations');
       const subject = getTranslation(lang, 'otp_subject');
@@ -821,7 +823,7 @@ fastify.post(
       sendEmail({
         to: user.email,
         subject: subject,
-        html: `<p>${bodyText} <strong style="font-size: 24px;">${otp}</strong></p>`
+        html: buildOtpEmail(bodyText, otp)
       });
       return reply.code(403).send({ error: "email_not_verified", message: "Please verify your email address.", requiresVerification: true, email: user.email });
     }
@@ -860,10 +862,11 @@ fastify.post(
       const linkText = getTranslation(lang, 'sso_login_btn') || "Return to Website";
       const linkUrl = process.env.APP_WEB_URL || "http://localhost:5173";
 
+      const { buildCtaEmail } = require('./services/emailTemplate');
       sendEmail({
         to: user.email,
         subject: subject,
-        html: `<p>${body}</p><p><a href="${linkUrl}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px;">${linkText}</a></p>`
+        html: buildCtaEmail(body, linkText, linkUrl, subject)
       });
 
       return reply.send({ success: true });
@@ -884,10 +887,11 @@ fastify.post(
     const linkText = getTranslation(lang, 'reset_password_btn');
     const linkUrl = `${process.env.APP_WEB_URL || "http://localhost:5173"}/${lang}/reset-password?token=${token}`;
 
+    const { buildCtaEmail: buildCtaEmailPw } = require('./services/emailTemplate');
     sendEmail({
       to: user.email,
       subject: subject,
-      html: `<p>${body}</p><p><a href="${linkUrl}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px;">${linkText}</a></p>`
+      html: buildCtaEmailPw(body, linkText, linkUrl, subject)
     });
 
     return reply.send({ success: true });
@@ -1116,6 +1120,7 @@ fastify.post(
     });
 
     const { sendEmail } = require('./services/emailService');
+    const { buildOtpEmail: buildOtpEmail2 } = require('./services/emailTemplate');
     const lang = req.body?.lang || 'en';
     const { getTranslation } = require('./config/emailTranslations');
     const subject = getTranslation(lang, 'otp_subject');
@@ -1124,7 +1129,7 @@ fastify.post(
     sendEmail({
       to: user.email,
       subject: subject,
-      html: `<p>${bodyText} <strong style="font-size: 24px;">${otp}</strong></p>`
+      html: buildOtpEmail2(bodyText, otp)
     });
 
     return reply.send({ requiresVerification: true, email: user.email });
@@ -1194,6 +1199,7 @@ fastify.post(
         }
       });
       const { sendEmail } = require('./services/emailService');
+      const { buildOtpEmail: buildOtpEmail3 } = require('./services/emailTemplate');
       const lang = req.body?.lang || 'en';
       const { getTranslation } = require('./config/emailTranslations');
       const subject = getTranslation(lang, 'otp_subject');
@@ -1201,7 +1207,7 @@ fastify.post(
       sendEmail({
         to: user.email,
         subject: subject,
-        html: `<p>${bodyText} <strong style="font-size: 24px;">${otp}</strong></p>`
+        html: buildOtpEmail3(bodyText, otp)
       });
       return reply.code(403).send({ error: "email_not_verified", message: "Please verify your email address.", requiresVerification: true, email: user.email });
     }
@@ -1241,10 +1247,11 @@ fastify.post(
       const linkUrl = process.env.APP_WEB_URL || "http://localhost:5173";
 
       const { sendEmail } = require('./services/emailService');
+      const { buildCtaEmail: buildCtaSso2 } = require('./services/emailTemplate');
       sendEmail({
         to: user.email,
         subject: subject,
-        html: `<p>${body}</p><p><a href="${linkUrl}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px;">${linkText}</a></p>`
+        html: buildCtaSso2(body, linkText, linkUrl, subject)
       });
 
       return reply.send({ success: true });
@@ -1267,10 +1274,11 @@ fastify.post(
     const linkUrl = `${process.env.APP_WEB_URL || "http://localhost:5173"}/${lang}/reset-password?token=${token}`;
 
     const { sendEmail } = require('./services/emailService');
+    const { buildCtaEmail: buildCtaPw2 } = require('./services/emailTemplate');
     sendEmail({
       to: user.email,
       subject: subject,
-      html: `<p>${body}</p><p><a href="${linkUrl}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px;">${linkText}</a></p>`
+      html: buildCtaPw2(body, linkText, linkUrl, subject)
     });
 
     return reply.send({ success: true });
@@ -1468,10 +1476,11 @@ const start = async () => {
               const body = getTranslation(lang, 'chat_body');
               const linkText = getTranslation(lang, 'view_message');
 
+              const { buildNotificationEmail: buildChatEmail } = require('./services/emailTemplate');
               await sendEmail({
                 to: actualUser.email,
                 subject: subject,
-                html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/messages?chatId=${conversationId}&messageId=${msg.id}">${linkText}</a></p>`
+                html: buildChatEmail(`<p style="margin:0;">💬 ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/messages?chatId=${conversationId}&messageId=${msg.id}`, subject)
               });
             } else {
               console.log(`[ChatDebug] Skipped email to ${actualUser?.email}: prefs check failed`);
@@ -1655,10 +1664,11 @@ const start = async () => {
                     const body = typeof bodyFn === 'function' ? bodyFn(item.title || 'Item') : bodyFn;
                     const linkText = getTranslation(lang, 'view_listing');
 
+                    const { buildNotificationEmail: buildFavListingEmail } = require('./services/emailTemplate');
                     sendEmail({
                       to: owner.email,
                       subject: subject,
-                      html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/${normalizedType === 'equipment' ? 'equipment' : 'horses'}/${id}">${linkText}</a></p>`
+                      html: buildFavListingEmail(`<p style="margin:0;">❤️ ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/${normalizedType === 'equipment' ? 'equipment' : 'horses'}/${id}`, subject)
                     });
                   }
                 }
@@ -1728,10 +1738,11 @@ const start = async () => {
                     const body = typeof bodyFn === 'function' ? bodyFn(item.full_name) : bodyFn;
                     const linkText = getTranslation(lang, 'view_service');
 
+                    const { buildNotificationEmail: buildFavServiceEmail } = require('./services/emailTemplate');
                     sendEmail({
                       to: owner.email,
                       subject: subject,
-                      html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/services/${id}">${linkText}</a></p>`
+                      html: buildFavServiceEmail(`<p style="margin:0;">❤️ ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/services/${id}`, subject)
                     });
                   }
                 }
@@ -1801,10 +1812,11 @@ const start = async () => {
                     const body = typeof bodyFn === 'function' ? bodyFn(item.name) : bodyFn;
                     const linkText = getTranslation(lang, 'view_profile');
 
+                    const { buildNotificationEmail: buildFavTrainerEmail } = require('./services/emailTemplate');
                     sendEmail({
                       to: owner.email,
                       subject: subject,
-                      html: `<p>${body}</p><p><a href="${process.env.APP_WEB_URL}/${lang}/trainers/${id}">${linkText}</a></p>`
+                      html: buildFavTrainerEmail(`<p style="margin:0;">❤️ ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/trainers/${id}`, subject)
                     });
                   }
                 }

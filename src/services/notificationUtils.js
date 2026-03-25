@@ -1,6 +1,7 @@
 // src/services/notificationUtils.js
 const { sendEmail } = require('./emailService');
 const { getTranslation } = require('../config/emailTranslations');
+const { buildNotificationEmail } = require('./emailTemplate');
 
 async function broadcastNewListing(prisma, type, b, listingId, userId) {
     try {
@@ -63,18 +64,19 @@ async function broadcastNewListing(prisma, type, b, listingId, userId) {
 
                     const desc = b.description || b.bio || b.biography || '';
 
-                    let html = `<p>${body}</p>`;
+                    let bodyHtml = `<p style="margin:0 0 8px;">${body}</p>`;
                     if (desc) {
-                        html += `<p>${desc.substring(0, 100) + '...'}</p>`;
+                        bodyHtml += `<p style="margin:0 0 8px;color:#7a5c40;font-size:14px;">${desc.substring(0, 100) + '...'}</p>`;
                     }
                     if (type === 'horse' || type === 'equipment') {
-                        html += `<p>${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>`;
+                        bodyHtml += `<p style="margin:0;font-weight:bold;">${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>`;
                     } else if (type === 'service' || type === 'trainer') {
                         if (b.hourly_rate) {
-                            html += `<p>${b.hourly_rate} EUR/hr</p>`;
+                            bodyHtml += `<p style="margin:0;font-weight:bold;">${b.hourly_rate} ${b.currency || 'EUR'}/hr</p>`;
                         }
                     }
-                    html += `<p><a href="${listingUrl}">${viewListing}</a></p>`;
+
+                    const html = buildNotificationEmail(bodyHtml, viewListing, listingUrl, subject);
 
                     await sendEmail({
                         to: r.email,
