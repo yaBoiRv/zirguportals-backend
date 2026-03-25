@@ -407,7 +407,7 @@ module.exports = async function forumRoutes(fastify) {
                                 <p style="font-size:17px;font-weight:bold;margin:0 0 12px;">💬 ${subject}</p>
                                 <p style="margin:0 0 16px;">${bodyContent}</p>
                             `;
-                            const html = buildNotificationEmail(bodyHtml, linkText, link, subject);
+                            const html = buildNotificationEmail(bodyHtml, linkText, link, subject, lang);
 
                             sendEmail({ to: recipient.email, subject: subject, html }).catch(console.error);
                         }

@@ -76,7 +76,7 @@ async function broadcastNewListing(prisma, type, b, listingId, userId) {
                         }
                     }
 
-                    const html = buildNotificationEmail(bodyHtml, viewListing, listingUrl, subject);
+                    const html = buildNotificationEmail(bodyHtml, viewListing, listingUrl, subject, lang);
 
                     await sendEmail({
                         to: r.email,

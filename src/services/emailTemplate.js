@@ -2,7 +2,7 @@
 // Centralized branded HTML email template for HorsePortal.net
 
 const SITE_URL = process.env.APP_WEB_URL || 'https://horseportal.net';
-const BRAND_NAME = 'HorsePortal.net';
+const LOGO_URL = `${process.env.APP_WEB_URL || 'https://horseportal.net'}/images/logos/horseportal-logo-website-formated.png`;
 
 // Brand colors (equestrian brown/amber theme from index.css)
 const COLORS = {
@@ -17,18 +17,30 @@ const COLORS = {
     footerBg: '#f5ede4',
 };
 
+// Translated footer disclaimer
+const AUTO_DISCLAIMER = {
+    lv: 'Šis ir automātisks paziņojums. Lūdzu, neatbildiet uz šo e-pastu.',
+    lt: 'Tai automatinis pranešimas. Prašome neatsakyti į šį el. laišką.',
+    ru: 'Это автоматическое уведомление. Пожалуйста, не отвечайте на это письмо.',
+    ee: 'See on automaatne teade. Palun ärge vastake sellele e-kirjale.',
+    en: 'This is an automated notification. Please do not reply to this email.',
+};
+
 /**
  * Wrap content in the branded email layout.
  *
  * @param {object} opts
+ * @param {string} [opts.lang]           - Language code (en/lv/lt/ru/ee), defaults to 'en'
  * @param {string} opts.preheader        - Short preview text (shown in email clients)
  * @param {string} opts.bodyHtml         - Main inner HTML (paragraphs, etc.)
  * @param {string} [opts.ctaLabel]       - Button label (optional)
  * @param {string} [opts.ctaUrl]         - Button URL (optional)
- * @param {string} [opts.footerNote]     - Extra small text below footer logo
+ * @param {string} [opts.footerNote]     - Extra small text below footer
  * @returns {string}                     - Full email HTML
  */
-function buildEmail({ preheader = '', bodyHtml, ctaLabel, ctaUrl, footerNote }) {
+function buildEmail({ lang = 'en', preheader = '', bodyHtml, ctaLabel, ctaUrl, footerNote }) {
+    const disclaimer = AUTO_DISCLAIMER[lang] || AUTO_DISCLAIMER['en'];
+
     const cta = ctaLabel && ctaUrl ? `
         <table cellpadding="0" cellspacing="0" border="0" style="margin:28px auto 0;">
             <tr>
@@ -43,12 +55,12 @@ function buildEmail({ preheader = '', bodyHtml, ctaLabel, ctaUrl, footerNote }) 
         </table>` : '';
 
     return `<!DOCTYPE html>
-<html lang="lv">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>${BRAND_NAME}</title>
+  <title>HorsePortal.net</title>
   <!--[if mso]>
   <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
   <![endif]-->
@@ -70,28 +82,17 @@ function buildEmail({ preheader = '', bodyHtml, ctaLabel, ctaUrl, footerNote }) 
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="max-width:560px;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(154,69,9,0.12);">
 
-          <!-- Header bar -->
+          <!-- Header bar with logo -->
           <tr>
             <td align="center"
-                style="background:linear-gradient(135deg,${COLORS.primary} 0%,${COLORS.primaryLight} 100%);padding:28px 32px 22px;">
-              <table cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="padding-right:10px;vertical-align:middle;">
-                    <!-- Horse icon SVG (inline, email-safe) -->
-                    <div style="width:40px;height:40px;background:rgba(255,255,255,0.20);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M2 16s2-2 5-2 5 2 8 2 5-2 5-2"/>
-                        <path d="M12 2C9 2 7 4 7 7c0 2 1 4 2.5 5H7l-2 4h14l-2-4h-2.5C16 11 17 9 17 7c0-3-2-5-5-5z"/>
-                      </svg>
-                    </div>
-                  </td>
-                  <td style="vertical-align:middle;">
-                    <span style="font-family:Arial,sans-serif;font-size:22px;font-weight:bold;color:#ffffff;letter-spacing:-0.3px;">
-                      HorsePortal<span style="color:${COLORS.accent};">.net</span>
-                    </span>
-                  </td>
-                </tr>
-              </table>
+                style="background:linear-gradient(135deg,${COLORS.primary} 0%,${COLORS.primaryLight} 100%);padding:24px 32px 20px;">
+              <a href="${SITE_URL}" target="_blank" style="display:inline-block;text-decoration:none;">
+                <img src="${LOGO_URL}"
+                     alt="HorsePortal"
+                     width="200"
+                     style="display:block;height:auto;border:0;max-width:200px;"
+                     onerror="this.style.display='none'" />
+              </a>
             </td>
           </tr>
 
@@ -118,18 +119,12 @@ function buildEmail({ preheader = '', bodyHtml, ctaLabel, ctaUrl, footerNote }) 
 
           <!-- Footer -->
           <tr>
-            <td bgcolor="${COLORS.footerBg}" style="padding:20px 36px 24px;border-radius:0 0 12px 12px;">
+            <td bgcolor="${COLORS.footerBg}" style="padding:16px 36px 20px;border-radius:0 0 12px 12px;">
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="font-family:Arial,sans-serif;font-size:12px;color:${COLORS.muted};line-height:1.6;text-align:center;">
-                    <strong>
-                      <a href="${SITE_URL}" style="color:${COLORS.primary};text-decoration:none;">${BRAND_NAME}</a>
-                    </strong>
-                    &nbsp;— Horse Marketplace in the Baltics<br/>
                     ${footerNote ? `<span style="opacity:0.8;">${footerNote}</span><br/>` : ''}
-                    <span style="opacity:0.65;font-size:11px;">
-                      Šis ir automātisks paziņojums. Lūdzu, neatbildiet uz šo e-pastu.
-                    </span>
+                    <span style="opacity:0.65;font-size:11px;">${disclaimer}</span>
                   </td>
                 </tr>
               </table>
@@ -152,8 +147,9 @@ function buildEmail({ preheader = '', bodyHtml, ctaLabel, ctaUrl, footerNote }) 
  * Build an OTP / verification code email.
  * @param {string} bodyText - Translated intro sentence
  * @param {string} otp      - 6-digit code
+ * @param {string} [lang]   - Language code
  */
-function buildOtpEmail(bodyText, otp) {
+function buildOtpEmail(bodyText, otp, lang = 'en') {
     const body = `
         <p style="margin:0 0 20px;">${bodyText}</p>
         <table cellpadding="0" cellspacing="0" border="0" style="margin:8px auto 24px;width:100%;">
@@ -167,9 +163,10 @@ function buildOtpEmail(bodyText, otp) {
         </table>
     `;
     return buildEmail({
+        lang,
         preheader: `Your verification code: ${otp}`,
         bodyHtml: body,
-        footerNote: 'Code valid for 15 minutes.'
+        footerNote: null
     });
 }
 
@@ -179,15 +176,17 @@ function buildOtpEmail(bodyText, otp) {
  * @param {string} btnLabel  - Button label
  * @param {string} btnUrl    - Button URL
  * @param {string} preheader - Short preview text
+ * @param {string} [lang]    - Language code
  */
-function buildCtaEmail(bodyText, btnLabel, btnUrl, preheader) {
+function buildCtaEmail(bodyText, btnLabel, btnUrl, preheader, lang = 'en') {
     const body = `<p style="margin:0 0 8px;">${bodyText}</p>`;
     return buildEmail({
+        lang,
         preheader: preheader || bodyText.replace(/<[^>]+>/g, '').slice(0, 80),
         bodyHtml: body,
         ctaLabel: btnLabel,
         ctaUrl: btnUrl,
-        footerNote: 'This link expires in 1 hour.'
+        footerNote: null
     });
 }
 
@@ -197,9 +196,11 @@ function buildCtaEmail(bodyText, btnLabel, btnUrl, preheader) {
  * @param {string} [ctaLabel]    - Optional button label
  * @param {string} [ctaUrl]      - Optional button URL
  * @param {string} [preheader]   - Preview text
+ * @param {string} [lang]        - Language code
  */
-function buildNotificationEmail(bodyHtml, ctaLabel, ctaUrl, preheader) {
+function buildNotificationEmail(bodyHtml, ctaLabel, ctaUrl, preheader, lang = 'en') {
     return buildEmail({
+        lang,
         preheader: preheader || '',
         bodyHtml,
         ctaLabel,

@@ -744,7 +744,7 @@ fastify.post(
     sendEmail({
       to: user.email,
       subject: subject,
-      html: buildOtpEmail(bodyText, otp)
+      html: buildOtpEmail(bodyText, otp, lang)
     });
 
     return reply.send({ requiresVerification: true, email: user.email });
@@ -823,7 +823,7 @@ fastify.post(
       sendEmail({
         to: user.email,
         subject: subject,
-        html: buildOtpEmail(bodyText, otp)
+        html: buildOtpEmail(bodyText, otp, lang)
       });
       return reply.code(403).send({ error: "email_not_verified", message: "Please verify your email address.", requiresVerification: true, email: user.email });
     }
@@ -866,7 +866,7 @@ fastify.post(
       sendEmail({
         to: user.email,
         subject: subject,
-        html: buildCtaEmail(body, linkText, linkUrl, subject)
+        html: buildCtaEmail(body, linkText, linkUrl, subject, lang)
       });
 
       return reply.send({ success: true });
@@ -891,7 +891,7 @@ fastify.post(
     sendEmail({
       to: user.email,
       subject: subject,
-      html: buildCtaEmailPw(body, linkText, linkUrl, subject)
+      html: buildCtaEmailPw(body, linkText, linkUrl, subject, lang)
     });
 
     return reply.send({ success: true });
@@ -1129,7 +1129,7 @@ fastify.post(
     sendEmail({
       to: user.email,
       subject: subject,
-      html: buildOtpEmail2(bodyText, otp)
+      html: buildOtpEmail2(bodyText, otp, lang)
     });
 
     return reply.send({ requiresVerification: true, email: user.email });
@@ -1207,7 +1207,7 @@ fastify.post(
       sendEmail({
         to: user.email,
         subject: subject,
-        html: buildOtpEmail3(bodyText, otp)
+        html: buildOtpEmail3(bodyText, otp, lang)
       });
       return reply.code(403).send({ error: "email_not_verified", message: "Please verify your email address.", requiresVerification: true, email: user.email });
     }
@@ -1251,7 +1251,7 @@ fastify.post(
       sendEmail({
         to: user.email,
         subject: subject,
-        html: buildCtaSso2(body, linkText, linkUrl, subject)
+        html: buildCtaSso2(body, linkText, linkUrl, subject, lang)
       });
 
       return reply.send({ success: true });
@@ -1278,7 +1278,7 @@ fastify.post(
     sendEmail({
       to: user.email,
       subject: subject,
-      html: buildCtaPw2(body, linkText, linkUrl, subject)
+      html: buildCtaPw2(body, linkText, linkUrl, subject, lang)
     });
 
     return reply.send({ success: true });
@@ -1480,7 +1480,7 @@ const start = async () => {
               await sendEmail({
                 to: actualUser.email,
                 subject: subject,
-                html: buildChatEmail(`<p style="margin:0;">💬 ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/messages?chatId=${conversationId}&messageId=${msg.id}`, subject)
+                html: buildChatEmail(`<p style="margin:0;">💬 ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/messages?chatId=${conversationId}&messageId=${msg.id}`, subject, lang)
               });
             } else {
               console.log(`[ChatDebug] Skipped email to ${actualUser?.email}: prefs check failed`);
@@ -1668,7 +1668,7 @@ const start = async () => {
                     sendEmail({
                       to: owner.email,
                       subject: subject,
-                      html: buildFavListingEmail(`<p style="margin:0;">❤️ ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/${normalizedType === 'equipment' ? 'equipment' : 'horses'}/${id}`, subject)
+                      html: buildFavListingEmail(`<p style="margin:0;">❤️ ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/${normalizedType === 'equipment' ? 'equipment' : 'horses'}/${id}`, subject, lang)
                     });
                   }
                 }
@@ -1742,7 +1742,7 @@ const start = async () => {
                     sendEmail({
                       to: owner.email,
                       subject: subject,
-                      html: buildFavServiceEmail(`<p style="margin:0;">❤️ ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/services/${id}`, subject)
+                      html: buildFavServiceEmail(`<p style="margin:0;">❤️ ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/services/${id}`, subject, lang)
                     });
                   }
                 }
@@ -1816,7 +1816,7 @@ const start = async () => {
                     sendEmail({
                       to: owner.email,
                       subject: subject,
-                      html: buildFavTrainerEmail(`<p style="margin:0;">❤️ ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/trainers/${id}`, subject)
+                      html: buildFavTrainerEmail(`<p style="margin:0;">❤️ ${body}</p>`, linkText, `${process.env.APP_WEB_URL}/${lang}/trainers/${id}`, subject, lang)
                     });
                   }
                 }
