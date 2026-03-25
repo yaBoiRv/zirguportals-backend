@@ -145,9 +145,9 @@ module.exports = async function servicesRoutes(fastify) {
             const result = await prisma.$queryRawUnsafe(
                 `INSERT INTO public.services (
                     user_id, full_name, bio, hourly_rate, specialty, specialties,
-                    regions_served, phone, profile_photo_url, visible, pricing_type, custom_specialty
+                    regions_served, phone, profile_photo_url, visible, pricing_type, custom_specialty, currency
                 ) VALUES (
-                    $1::uuid, $2, $3, $4, $5, $6::text[], $7::jsonb, $8, $9, $10, $11, $12
+                    $1::uuid, $2, $3, $4, $5, $6::text[], $7::jsonb, $8, $9, $10, $11, $12, $13
                 ) RETURNING *`,
                 userId,
                 b.full_name,
@@ -160,7 +160,8 @@ module.exports = async function servicesRoutes(fastify) {
                 b.profile_photo_url || null,
                 b.visible !== false,
                 b.pricing_type || 'not_specified',
-                b.custom_specialty || null
+                b.custom_specialty || null,
+                b.currency || 'EUR'
             );
             // Broadcast Email for New Service
             if (b.visible === true) {
@@ -197,6 +198,7 @@ module.exports = async function servicesRoutes(fastify) {
                 full_name: 'full_name',
                 bio: 'bio',
                 hourly_rate: 'hourly_rate',
+                currency: 'currency',
                 specialty: 'specialty',
                 specialties: 'specialties',
                 regions_served: 'regions_served',

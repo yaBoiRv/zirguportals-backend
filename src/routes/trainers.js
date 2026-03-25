@@ -156,11 +156,11 @@ module.exports = async function trainersRoutes(fastify) {
         try {
             const result = await prisma.$queryRawUnsafe(
                 `INSERT INTO public.trainers (
-          user_id, name, bio, years_experience, hourly_rate, pricing_type, 
+          user_id, name, bio, years_experience, hourly_rate, pricing_type, currency,
           phone, website_url, photo_url, age, specialties, languages, 
           certifications, certification_details, files, visible
         ) VALUES (
-          $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12::text[], $13::text[], $14::jsonb, $15::text[], $16
+          $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::text[], $13::text[], $14::text[], $15::jsonb, $16::text[], $17
         ) RETURNING id`,
                 userId,
                 b.name,
@@ -168,6 +168,7 @@ module.exports = async function trainersRoutes(fastify) {
                 b.years_experience,
                 b.hourly_rate || null,
                 b.pricing_type,
+                b.currency || 'EUR',
                 b.phone || null,
                 b.website_url || null,
                 b.photo_url || null,
@@ -225,6 +226,7 @@ module.exports = async function trainersRoutes(fastify) {
                 years_experience: 'years_experience',
                 hourly_rate: 'hourly_rate',
                 pricing_type: 'pricing_type',
+                currency: 'currency',
                 phone: 'phone',
                 website_url: 'website_url',
                 photo_url: 'photo_url',
