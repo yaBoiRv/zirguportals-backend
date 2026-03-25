@@ -57,7 +57,7 @@ module.exports = async function blogRoutes(fastify) {
     }
 
     // Helper: convert HTML to Markdown-compatible (for body, we just wrap in raw HTML)
-    function buildMarkdownFile({ title, metaTitle, description, date, image, category, language, content, slug, published }) {
+    function buildMarkdownFile({ title, metaTitle, description, date, image, category, language, content, slug, published, groupId }) {
         return `---
 title: "${escapeFm(title)}"
 metaTitle: "${escapeFm(metaTitle || title)}"
@@ -67,6 +67,7 @@ image: ${image ? `"${escapeFm(image)}"` : ''}
 category: ${category ? `"${escapeFm(category)}"` : '""'}
 language: ${language}
 published: ${published !== false ? 'true' : 'false'}
+groupId: ${groupId ? `"${escapeFm(groupId)}"` : '""'}
 ---
 
 ${content || ''}
@@ -123,6 +124,7 @@ ${content || ''}
                             category: fm.category || (fm.tags && fm.tags[0]) || 'News',
                             published: fm.published !== false,
                             preview: (fm.content || '').substring(0, 200),
+                            groupId: fm.groupId || '',
                         });
                     }
                 }
@@ -225,7 +227,7 @@ ${content || ''}
 
     // POST /api/blog - create new post
     fastify.post('/', { preHandler: requireAdmin }, async (req, reply) => {
-        const { title, metaTitle, description, content, language, image, category, date, published, customSlug } = req.body || {};
+        const { title, metaTitle, description, content, language, image, category, date, published, customSlug, groupId } = req.body || {};
         if (!title || !language) return reply.code(400).send({ error: 'title and language required' });
         if (!SUPPORTED_LANGS.includes(language)) return reply.code(400).send({ error: 'Invalid language' });
 
@@ -236,10 +238,11 @@ ${content || ''}
         const filePath = path.join(langDir, `${slug}.md`);
         if (fs.existsSync(filePath)) return reply.code(409).send({ error: 'A post with this slug already exists' });
 
-        const fileContent = buildMarkdownFile({ title, metaTitle, description, date: date || new Date().toISOString().split('T')[0], image, category: category || 'News', language, content, slug, published });
+        const newGroupId = groupId || crypto.randomUUID();
+        const fileContent = buildMarkdownFile({ title, metaTitle, description, date: date || new Date().toISOString().split('T')[0], image, category: category || 'News', language, content, slug, published, groupId: newGroupId });
         fs.writeFileSync(filePath, fileContent, 'utf-8');
 
-        return reply.code(201).send({ slug, language, id: `${language}/${slug}` });
+        return reply.code(201).send({ slug, language, id: `${language}/${slug}`, groupId: newGroupId });
     });
 
     // PUT /api/blog/:lang/:slug - update existing post
@@ -249,7 +252,7 @@ ${content || ''}
         const filePath = path.join(BLOG_DIR, lang, `${slug}.md`);
         if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Post not found' });
 
-        const { title, metaTitle, description, content, image, category, date, published, customSlug } = req.body || {};
+        const { title, metaTitle, description, content, image, category, date, published, customSlug, groupId } = req.body || {};
 
         let targetSlug = slug;
         let targetFilePath = filePath;
@@ -277,6 +280,7 @@ ${content || ''}
             content: content !== undefined ? content : existing.content,
             slug: targetSlug,
             published: published !== undefined ? published : existing.published,
+            groupId: groupId ?? existing.groupId,
         });
         
         fs.writeFileSync(targetFilePath, fileContent, 'utf-8');
