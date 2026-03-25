@@ -4,17 +4,17 @@
 const SITE_URL = process.env.APP_WEB_URL || 'https://horseportal.net';
 const LOGO_URL = 'https://horseportal.net/images/logos/horseportal-logo-website-formated.png';
 
-// Brand colors (dark theme based on user's #171411 request)
+// Brand colors
 const COLORS = {
-    primary: '#9a4509',       // hsl(28, 85%, 35%)
-    primaryLight: '#c9722a',  // hsl(28, 65%, 47%)
-    accent: '#f6a623',        // hsl(32, 95%, 55%)
-    bg: '#171411',            // user requested dark background
-    cardBg: '#1e1a17',        // slightly lighter dark for cards
-    text: '#e8ddd4',          // light warm text for readability
-    muted: '#a38d7a',         // subtle text color
-    border: '#2c2521',        // dark border for separation
-    footerBg: '#110f0c',      // very dark footer
+    primary: '#171411',       // dark main color for header & buttons
+    primaryLight: '#2a241e',  // slightly lighter for subtle gradient
+    accent: '#f6a623',        // gold accent
+    bg: '#fdf8f4',            // warm off-white
+    cardBg: '#ffffff',
+    text: '#171411',          // dark text matching primary
+    muted: '#5a4a40',         // muted brown
+    border: '#e8ddd4',        // light border
+    footerBg: '#f5ede4',
 };
 
 // Translated footer disclaimer
@@ -154,10 +154,10 @@ function buildOtpEmail(bodyText, otp, lang = 'en') {
         <p style="margin:0 0 20px;">${bodyText}</p>
         <table cellpadding="0" cellspacing="0" border="0" style="margin:8px auto 24px;width:100%;">
           <tr>
-            <td align="center" bgcolor="#28221c"
+            <td align="center" bgcolor="#fdf1e3"
                 style="padding:20px 32px;border-radius:10px;border:2px dashed ${COLORS.accent};">
               <span style="font-family:'Courier New',Courier,monospace;font-size:34px;font-weight:bold;
-                           letter-spacing:10px;color:${COLORS.accent};">${otp}</span>
+                           letter-spacing:10px;color:${COLORS.primary};">${otp}</span>
             </td>
           </tr>
         </table>
