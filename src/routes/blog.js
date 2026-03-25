@@ -269,6 +269,8 @@ ${content || ''}
         const raw = fs.readFileSync(filePath, 'utf-8');
         const existing = parseFrontmatter(raw) || {};
 
+        const finalGroupId = groupId || existing.groupId || crypto.randomUUID();
+
         const fileContent = buildMarkdownFile({
             title: title ?? existing.title,
             metaTitle: metaTitle ?? existing.metaTitle,
@@ -280,7 +282,7 @@ ${content || ''}
             content: content !== undefined ? content : existing.content,
             slug: targetSlug,
             published: published !== undefined ? published : existing.published,
-            groupId: groupId ?? existing.groupId,
+            groupId: finalGroupId,
         });
         
         fs.writeFileSync(targetFilePath, fileContent, 'utf-8');
@@ -289,7 +291,7 @@ ${content || ''}
             fs.unlinkSync(filePath);
         }
 
-        return { slug: targetSlug, language: lang };
+        return { slug: targetSlug, language: lang, groupId: finalGroupId };
     });
 
     // DELETE /api/blog/:lang/:slug - delete post
