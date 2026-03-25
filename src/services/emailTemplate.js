@@ -4,17 +4,17 @@
 const SITE_URL = process.env.APP_WEB_URL || 'https://horseportal.net';
 const LOGO_URL = 'https://horseportal.net/images/logos/horseportal-logo-website-formated.png';
 
-// Brand colors (equestrian brown/amber theme from index.css)
+// Brand colors (dark theme based on user's #171411 request)
 const COLORS = {
     primary: '#9a4509',       // hsl(28, 85%, 35%)
     primaryLight: '#c9722a',  // hsl(28, 65%, 47%)
     accent: '#f6a623',        // hsl(32, 95%, 55%)
-    bg: '#fdf8f4',            // warm off-white
-    cardBg: '#ffffff',
-    text: '#3d2008',          // hsl(28, 25%, 15%) - dark brown
-    muted: '#7a5c40',         // muted brown
-    border: '#e8ddd4',        // hsl(42, 20%, 88%)
-    footerBg: '#f5ede4',
+    bg: '#171411',            // user requested dark background
+    cardBg: '#1e1a17',        // slightly lighter dark for cards
+    text: '#e8ddd4',          // light warm text for readability
+    muted: '#a38d7a',         // subtle text color
+    border: '#2c2521',        // dark border for separation
+    footerBg: '#110f0c',      // very dark footer
 };
 
 // Translated footer disclaimer
@@ -154,10 +154,10 @@ function buildOtpEmail(bodyText, otp, lang = 'en') {
         <p style="margin:0 0 20px;">${bodyText}</p>
         <table cellpadding="0" cellspacing="0" border="0" style="margin:8px auto 24px;width:100%;">
           <tr>
-            <td align="center" bgcolor="#fdf1e3"
+            <td align="center" bgcolor="#28221c"
                 style="padding:20px 32px;border-radius:10px;border:2px dashed ${COLORS.accent};">
               <span style="font-family:'Courier New',Courier,monospace;font-size:34px;font-weight:bold;
-                           letter-spacing:10px;color:${COLORS.primary};">${otp}</span>
+                           letter-spacing:10px;color:${COLORS.accent};">${otp}</span>
             </td>
           </tr>
         </table>
