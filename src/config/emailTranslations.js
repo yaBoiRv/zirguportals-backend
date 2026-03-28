@@ -22,16 +22,16 @@ const translations = {
         favorite_trainer_body: (name) => `A user favorited your trainer profile "${name}".`,
         view_profile: "View Profile",
 
-        new_listing_subject: (title) => `New Listing: ${title}`,
+        new_listing_subject: "New Listing Added!",
         new_listing_body: (title) => `A new horse listing has been posted: <strong>${title}</strong>`,
         new_equipment_body: (title) => `A new equipment listing has been posted: <strong>${title}</strong>`,
         price: "Price",
 
-        new_announcement_subject: (title) => `New Announcement: ${title}`,
+        new_announcement_subject: "New Announcement Added!",
         read_more: "Read more",
-        new_service_subject: (title) => `New Service: ${title}`,
+        new_service_subject: "New Service Added!",
         new_service_body: (title) => `A new service listing has been posted: <strong>${title}</strong>`,
-        new_trainer_subject: (title) => `New Trainer Profile: ${title}`,
+        new_trainer_subject: "New Trainer Profile Added!",
         new_trainer_body: (title) => `A new trainer profile has been created: <strong>${title}</strong>`,
 
         forgot_password_subject: "Password Reset Request",
@@ -68,16 +68,16 @@ const translations = {
         favorite_trainer_body: (name) => `Lietotājs pievienoja jūsu trenera profilu "${name}" favorītiem.`,
         view_profile: "Skatīt profilu",
 
-        new_listing_subject: (title) => `Jauns sludinājums: ${title}`,
+        new_listing_subject: "Pievienots jauns sludinājums!",
         new_listing_body: (title) => `Pievienots jauns zirga sludinājums: <strong>${title}</strong>`,
         new_equipment_body: (title) => `Pievienots jauns ekipējuma sludinājums: <strong>${title}</strong>`,
         price: "Cena",
 
-        new_announcement_subject: (title) => `Jauns paziņojums: ${title}`,
+        new_announcement_subject: "Pievienots jauns paziņojums!",
         read_more: "Lasīt vairāk",
-        new_service_subject: (title) => `Jauns pakalpojums: ${title}`,
+        new_service_subject: "Pievienots jauns pakalpojums!",
         new_service_body: (title) => `Pievienots jauns pakalpojums: <strong>${title}</strong>`,
-        new_trainer_subject: (title) => `Jauns treneris: ${title}`,
+        new_trainer_subject: "Izveidots jauns trenera profils!",
         new_trainer_body: (title) => `Izveidots jauns trenera profils: <strong>${title}</strong>`,
 
         forgot_password_subject: "Paroles atiestatīšanas pieprasījums",
@@ -114,16 +114,16 @@ const translations = {
         favorite_trainer_body: (name) => `Пользователь добавил ваш профиль тренера "${name}" в избранное.`,
         view_profile: "Посмотреть профиль",
 
-        new_listing_subject: (title) => `Новое объявление: ${title}`,
+        new_listing_subject: "Добавлено новое объявление!",
         new_listing_body: (title) => `Опубликовано новое объявление о продаже лошади: <strong>${title}</strong>`,
         new_equipment_body: (title) => `Опубликовано новое объявление (экипировка): <strong>${title}</strong>`,
         price: "Цена",
 
-        new_announcement_subject: (title) => `Новое уведомление: ${title}`, // Added hint to distinguish
+        new_announcement_subject: "Добавлено новое уведомление!", // Added hint to distinguish
         read_more: "Читать далее",
-        new_service_subject: (title) => `Новая услуга: ${title}`,
+        new_service_subject: "Добавлена новая услуга!",
         new_service_body: (title) => `Добавлена новая услуга: <strong>${title}</strong>`,
-        new_trainer_subject: (title) => `Новый тренер: ${title}`,
+        new_trainer_subject: "Создан новый профиль тренера!",
         new_trainer_body: (title) => `Создан новый профиль тренера: <strong>${title}</strong>`,
 
         forgot_password_subject: "Запрос на сброс пароля",
@@ -160,16 +160,16 @@ const translations = {
         favorite_trainer_body: (name) => `Kasutaja lisas teie treeneriprofiili "${name}" lemmikutesse.`,
         view_profile: "Vaata profiili",
 
-        new_listing_subject: (title) => `Uus kuulutus: ${title}`,
+        new_listing_subject: "Uus kuulutus lisatud!",
         new_listing_body: (title) => `Lisatud uus hobuse müügikuulutus: <strong>${title}</strong>`,
         new_equipment_body: (title) => `Lisati uus varustuse kuulutus: <strong>${title}</strong>`,
         price: "Hind",
 
-        new_announcement_subject: (title) => `Uus teadaanne: ${title}`,
+        new_announcement_subject: "Uus teadaanne lisatud!",
         read_more: "Loe edasi",
-        new_service_subject: (title) => `Uus teenus: ${title}`,
+        new_service_subject: "Uus teenus lisatud!",
         new_service_body: (title) => `Lisati uus teenus: <strong>${title}</strong>`,
-        new_trainer_subject: (title) => `Uus treener: ${title}`,
+        new_trainer_subject: "Loodi uus treeneri profiil!",
         new_trainer_body: (title) => `Loodi uus treeneri profiil: <strong>${title}</strong>`,
 
         forgot_password_subject: "Parooli lähtestamise taotlus",
@@ -206,16 +206,16 @@ const translations = {
         favorite_trainer_body: (name) => `Vartotojas pamėgo jūsų trenerio profilį "${name}".`,
         view_profile: "Peržiūrėti profilį",
 
-        new_listing_subject: (title) => `Naujas skelbimas: ${title}`,
+        new_listing_subject: "Pridėtas naujas skelbimas!",
         new_listing_body: (title) => `Įkeltas naujas žirgo pardavimo skelbimas: <strong>${title}</strong>`,
         new_equipment_body: (title) => `Įdėtas naujas įrangos skelbimas: <strong>${title}</strong>`,
         price: "Kaina",
 
-        new_announcement_subject: (title) => `Naujas pranešimas: ${title}`,
+        new_announcement_subject: "Pridėtas naujas pranešimas!",
         read_more: "Skaityti daugiau",
-        new_service_subject: (title) => `Nauja paslauga: ${title}`,
+        new_service_subject: "Pridėta nauja paslauga!",
         new_service_body: (title) => `Įdėta nauja paslauga: <strong>${title}</strong>`,
-        new_trainer_subject: (title) => `Naujas treneris: ${title}`,
+        new_trainer_subject: "Sukurtas naujas trenerio profilis!",
         new_trainer_body: (title) => `Sukurtas naujas trenerio profilis: <strong>${title}</strong>`,
 
         forgot_password_subject: "Slaptažodžio keitimo prašymas",

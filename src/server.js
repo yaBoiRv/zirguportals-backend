@@ -1609,8 +1609,6 @@ const start = async () => {
 
           if (existing) {
             await prisma.listing_favorites.delete({ where: { id: existing.id } });
-            const table = existing.listing_type === 'equipment' ? 'equipment_listings' : 'horse_listings';
-            await prisma.$executeRawUnsafe(`UPDATE public.${table} SET favorites_count = GREATEST(COALESCE(favorites_count, 0) - 1, 0) WHERE id = $1::uuid`, existing.listing_id);
             return { favorited: false };
           } else {
             const normalizedType = listingType === 'horses' ? 'horse' : (listingType || 'horse');
@@ -1622,7 +1620,6 @@ const start = async () => {
               }
             });
             const table = normalizedType === 'equipment' ? 'equipment_listings' : 'horse_listings';
-            await prisma.$executeRawUnsafe(`UPDATE public.${table} SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
 
             // Email Notification
             try {
@@ -1761,7 +1758,6 @@ const start = async () => {
 
           if (existing) {
             await prisma.trainer_favorites.delete({ where: { id: existing.id } });
-            await prisma.$executeRawUnsafe(`UPDATE public.trainers SET favorites_count = GREATEST(COALESCE(favorites_count, 0) - 1, 0) WHERE id = $1::uuid`, existing.trainer_id);
             return { favorited: false };
           } else {
             await prisma.trainer_favorites.create({
@@ -1770,7 +1766,6 @@ const start = async () => {
                 trainer_id: id
               }
             });
-            await prisma.$executeRawUnsafe(`UPDATE public.trainers SET favorites_count = COALESCE(favorites_count, 0) + 1 WHERE id = $1::uuid`, id);
 
             // Email Notification
             try {
