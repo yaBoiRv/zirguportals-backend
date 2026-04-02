@@ -69,10 +69,17 @@ async function broadcastNewListing(prisma, type, b, listingId, userId) {
                         bodyHtml += `<p style="margin:0 0 8px;color:#7a5c40;font-size:14px;">${desc.substring(0, 100) + '...'}</p>`;
                     }
                     if (type === 'horse' || type === 'equipment') {
-                        bodyHtml += `<p style="margin:0;font-weight:bold;">${priceLabel}: ${b.price || 'N/A'} ${b.currency || 'EUR'}</p>`;
+                        let priceDisplay = 'N/A';
+                        if (b.price !== undefined && b.price !== null && b.price !== '') {
+                            const symbol = String(b.currency || '').toUpperCase() === 'USD' ? '$' : '€';
+                            priceDisplay = `${b.price} ${symbol}`;
+                        }
+                        bodyHtml += `<p style="margin:0;font-weight:bold;">${priceLabel}: ${priceDisplay}</p>`;
                     } else if (type === 'service' || type === 'trainer') {
-                        if (b.hourly_rate) {
-                            bodyHtml += `<p style="margin:0;font-weight:bold;">${b.hourly_rate} ${b.currency || 'EUR'}/hr</p>`;
+                        if (b.hourly_rate !== undefined && b.hourly_rate !== null && b.hourly_rate !== '') {
+                            const symbol = String(b.currency || '').toUpperCase() === 'USD' ? '$' : '€';
+                            let rateDisplay = `${b.hourly_rate} ${symbol}/hr`;
+                            bodyHtml += `<p style="margin:0;font-weight:bold;">${rateDisplay}</p>`;
                         }
                     }
 

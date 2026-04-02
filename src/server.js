@@ -582,7 +582,7 @@ fastify.get("/whoami", async (req) => {
 
 
 fastify.post("/files/signed-upload", { preHandler: requireAuth }, async (req, reply) => {
-  const { filename, contentType, isPublic, bucket: requestedBucket } = req.body || {};
+  const { filename, contentType, isPublic, bucket: requestedBucket, folderId } = req.body || {};
   if (!filename || !contentType) {
     return reply.code(400).send({ error: "filename and contentType required" });
   }
@@ -596,7 +596,8 @@ fastify.post("/files/signed-upload", { preHandler: requireAuth }, async (req, re
   }
 
   const safeName = String(filename).replace(/[^a-zA-Z0-9_.-]/g, '_');
-  const key = `${crypto.randomUUID()}/${safeName}`;
+  const dirName = folderId ? String(folderId).replace(/[^a-zA-Z0-9-]/g, '') : crypto.randomUUID();
+  const key = `${dirName}/${safeName}`;
 
   const cmd = new PutObjectCommand({
     Bucket: bucket,
