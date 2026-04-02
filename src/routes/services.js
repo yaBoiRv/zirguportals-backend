@@ -117,12 +117,22 @@ module.exports = async function servicesRoutes(fastify) {
     // GET /services/user/:userId
     fastify.get('/user/:userId', async (req, reply) => {
         const { userId } = req.params;
-        const { limit = 10, offset = 0 } = req.query;
+        const { limit = 10, offset = 0, sort = 'date' } = req.query;
         try {
+            let orderClause = 'ORDER BY created_at DESC';
+            switch (sort) {
+                case 'published':
+                    orderClause = "ORDER BY CASE WHEN visible = true THEN 0 ELSE 1 END, created_at DESC";
+                    break;
+                case 'hidden':
+                    orderClause = "ORDER BY CASE WHEN visible = false THEN 0 ELSE 1 END, created_at DESC";
+                    break;
+            }
+
             const rows = await prisma.$queryRawUnsafe(`
                 SELECT * FROM public.services 
                 WHERE user_id = $1::uuid 
-                ORDER BY created_at DESC 
+                ${orderClause}
                 LIMIT $2 OFFSET $3
             `, userId, Number(limit), Number(offset));
 

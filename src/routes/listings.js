@@ -125,6 +125,9 @@ module.exports = async function listingsRoutes(fastify) {
             if (sort === 'price_asc') sql += ` ORDER BY l.price ASC`;
             else if (sort === 'price_desc') sql += ` ORDER BY l.price DESC`;
             else if (sort === 'popular') sql += ` ORDER BY l.favorites_count DESC`;
+            else if (sort === 'published') sql += ` ORDER BY CASE WHEN l.visible = true AND l.status != 'sold' THEN 0 ELSE 1 END, l.created_at DESC`;
+            else if (sort === 'hidden') sql += ` ORDER BY CASE WHEN l.visible = false AND l.status != 'sold' THEN 0 ELSE 1 END, l.created_at DESC`;
+            else if (sort === 'sold') sql += ` ORDER BY CASE WHEN l.status = 'sold' THEN 0 ELSE 1 END, l.created_at DESC`;
             else sql += ` ORDER BY l.created_at DESC`;
 
             sql += ` LIMIT $${pIdx++} OFFSET $${pIdx++}`;
@@ -615,6 +618,9 @@ module.exports = async function listingsRoutes(fastify) {
             if (sort === 'price_asc') sql += ` ORDER BY l.price ASC`;
             else if (sort === 'price_desc') sql += ` ORDER BY l.price DESC`;
             else if (sort === 'popular') sql += ` ORDER BY l.favorites_count DESC`;
+            else if (sort === 'published') sql += ` ORDER BY CASE WHEN l.visible = true AND l.status != 'sold' THEN 0 ELSE 1 END, l.created_at DESC`;
+            else if (sort === 'hidden') sql += ` ORDER BY CASE WHEN l.visible = false AND l.status != 'sold' THEN 0 ELSE 1 END, l.created_at DESC`;
+            else if (sort === 'sold') sql += ` ORDER BY CASE WHEN l.status = 'sold' THEN 0 ELSE 1 END, l.created_at DESC`;
             else sql += ` ORDER BY l.created_at DESC`;
 
             // Limit/Offset
