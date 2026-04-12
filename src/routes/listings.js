@@ -672,14 +672,14 @@ module.exports = async function listingsRoutes(fastify) {
                 `INSERT INTO public.equipment_listings (
                     user_id, title, description, price, currency, condition, size, 
                     country, images, status, featured, visible, city, lat, lon, 
-                    municipality, brand_id, material_id, equipment_type_id
+                    municipality, brand_id, material_id, equipment_type_id, equipment_item_id
                 ) VALUES (
-                    $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, 'available', $10, $11, $12, $13, $14, $15, $16, $17, $18
+                    $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, 'available', $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
                 ) RETURNING id`,
                 userId, b.title, b.description, b.price || null, b.currency || 'EUR', b.condition, b.size || null,
                 b.country, b.images || [], b.featured || false, b.visible !== false, b.city || null,
                 Number(b.lat || 0), Number(b.lon || 0), b.municipality || null, b.brand_id || null,
-                b.material_id || null, b.equipment_item_id || null
+                b.material_id || null, b.equipment_item_id || 1, b.equipment_item_id || null
             );
             const listingId = result[0].id;
             if (b.color_ids?.length) {
@@ -733,7 +733,8 @@ module.exports = async function listingsRoutes(fastify) {
                 municipality: 'municipality',
                 brand_id: 'brand_id',
                 material_id: 'material_id',
-                equipment_item_id: 'equipment_type_id',
+                equipment_item_id: 'equipment_item_id',
+                equipment_type_id: 'equipment_type_id',
                 status: 'status',
                 sold_at: 'sold_at'
             };
