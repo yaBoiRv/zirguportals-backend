@@ -62,7 +62,7 @@ module.exports = async function trainersRoutes(fastify) {
         const { userId } = req.params;
         try {
             const rows = await prisma.$queryRawUnsafe(`SELECT * FROM public.trainers WHERE user_id = $1::uuid`, userId);
-            if (!rows.length) return reply.code(404).send({ error: 'Trainer profile not found' });
+            if (!rows.length) return reply.code(200).send(null);
             return rows[0];
         } catch (e) {
             console.error(e);
