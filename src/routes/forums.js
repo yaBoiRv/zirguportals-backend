@@ -261,22 +261,43 @@ module.exports = async function forumRoutes(fastify) {
     // GET /forums/topics/:id/replies - Get all replies for a topic
     fastify.get('/topics/:id/replies', async (req, reply) => {
         const { id } = req.params;
+
+        // Extract user ID from token if present
+        let userId = null;
+        const auth = req.headers.authorization || '';
+        const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+        if (token) {
+            try {
+                const payload = fastify.jwt.verify(token);
+                userId = payload.sub;
+            } catch (e) {
+                const decoded = fastify.jwt.decode(token);
+                if (decoded?.sub) userId = decoded.sub;
+            }
+        }
+
         try {
+            const include = {
+                user: {
+                    include: {
+                        profile: {
+                            select: { name: true, username: true, avatarUrl: true }
+                        }
+                    }
+                },
+                _count: {
+                    select: { likes: true }
+                }
+            };
+
+            if (userId) {
+                include.likes = { where: { userId } };
+            }
+
             const replies = await prisma.forumReply.findMany({
                 where: { topicId: id },
                 orderBy: { createdAt: 'asc' },
-                include: {
-                    user: {
-                        include: {
-                            profile: {
-                                select: { name: true, username: true, avatarUrl: true }
-                            }
-                        }
-                    },
-                    _count: {
-                        select: { likes: true }
-                    }
-                }
+                include
             });
 
             return replies.map(r => ({
@@ -288,7 +309,8 @@ module.exports = async function forumRoutes(fastify) {
                 },
                 reply_to_profile: null,
                 files: r.files ? r.files.map(parseFile) : [],
-                likes_count: r._count.likes
+                likes_count: r._count.likes,
+                is_liked: userId ? (r.likes && r.likes.length > 0) : false
             }));
         } catch (e) {
             console.error(e);
@@ -440,12 +462,10 @@ module.exports = async function forumRoutes(fastify) {
         const userId = req.user.id;
 
         try {
-            const existingLike = await prisma.forumLike.findUnique({
+            const existingLike = await prisma.forumLike.findFirst({
                 where: {
-                    userId_topicId: {
-                        userId,
-                        topicId: id
-                    }
+                    userId: userId,
+                    topicId: id
                 }
             });
 
@@ -489,12 +509,10 @@ module.exports = async function forumRoutes(fastify) {
         const userId = req.user.id;
 
         try {
-            const existingLike = await prisma.forumLike.findUnique({
+            const existingLike = await prisma.forumLike.findFirst({
                 where: {
-                    userId_replyId: {
-                        userId,
-                        replyId: id
-                    }
+                    userId: userId,
+                    replyId: id
                 }
             });
 
